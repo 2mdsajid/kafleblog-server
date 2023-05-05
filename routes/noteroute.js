@@ -81,7 +81,7 @@ const upload = setDirectory()
 router.post('/saveimages', upload.array('images', 15), async (req, res) => {
 
     let imageurls = [] //to store the URLs
-    const { captions, sources } = req.body
+    // const { captions, sources } = req.body
 
     try {
 
@@ -96,10 +96,12 @@ router.post('/saveimages', upload.array('images', 15), async (req, res) => {
             // creating a name to put in the blog during entry -  to be parsed with image urls later on render
             const img = `_root_i_${index + 1}`
 
+            
+
             const image = {
                 url: imgurl || '',
-                caption: captions[index] || '',
-                source: sources[index] || '',
+                // caption: captions[index] || '',
+                // source: sources[index] || '',
                 img
             }
 
@@ -107,7 +109,8 @@ router.post('/saveimages', upload.array('images', 15), async (req, res) => {
             await fse.unlink(file.path);
         }
         ));
-
+        
+        console.log("🚀 ~ file: noteroute.js:107 ~ images ~ imageurls:", imageurls)
         if (imageurls.length === req.files.length) {
             return res.status(201).json({
                 message: 'Note addded successfully',
@@ -148,6 +151,9 @@ router.post('/savenote', async (req, res, next) => {
         readtime,
         images,
     } = req.body
+    console.log("🚀 ~ file: noteroute.js:154 ~ router.post ~ req.body:", req.body)
+
+
 
     try {
         // saving the data into mongo database
@@ -158,7 +164,7 @@ router.post('/savenote', async (req, res, next) => {
             subcategory: subcategory || '',
             intro,
             content,
-            keywords,
+            keywords:keywords.split(',') || '',
             readtime,
             images,
         })
@@ -166,6 +172,7 @@ router.post('/savenote', async (req, res, next) => {
         // return res.json({newnote})
 
         const savednote = await newnote.save()
+        console.log("🚀 ~ file: noteroute.js:175 ~ router.post ~ savednote:", savednote)
 
         // checking for error while uploading
         if (savednote) {

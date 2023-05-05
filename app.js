@@ -3,6 +3,14 @@ let express = require('express')
 const http = require('http');
 let app = express()
 
+
+
+
+// Set the maximum payload size to 50MB
+const bodyParser = require('body-parser');
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+
 // Importing dotenv library to retrieve sensitive information from the .env file
 const dotenv = require('dotenv')
 dotenv.config({ path: './config.env' })
@@ -18,6 +26,16 @@ app.use('/public', express.static('public'));
 
 let cors = require('cors')
 app.use(cors());
+
+app.use(function (req, res, next) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type');
+    res.setHeader('Access-Control-Allow-Credentials', true);
+    next();
+});
+
+
 
 //before AUTH.JS loading so that it effects
 app.use(express.json())
