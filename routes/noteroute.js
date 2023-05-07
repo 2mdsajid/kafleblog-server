@@ -35,6 +35,7 @@ cloudinary.config({
 const multer = require('multer')
 const fse = require('fs-extra')
 const path = require('path');
+const Subscriber = require('../schema/subscriberSchema');
 
 // Setting the directory where the files will be stored
 const DIR = './public/';
@@ -402,6 +403,40 @@ router.post('/changereview', async (req, res) => {
         res.status(201).json({
             message: 'Note Approved successfully',
             savednote,
+            status: 201,
+            meaning: 'created'
+        })
+
+    } catch (error) {
+        return res.status(501).json({
+            message: error.message,
+            status: 501,
+            meaning: 'internalerror'
+        })
+    }
+})
+
+// ADD subscribers
+// publishing the note from the draft
+router.post('/addsubscribe', async (req, res) => {
+    try {
+        const { name,email } = req.body
+        const subscriber = await Note.findOne({ email })
+
+        if (subscriber) {
+            return res.status(401).json({
+                message: 'Already subscribed',
+                status: 401,
+                meaning: 'badrequest'
+            })
+        }
+
+      const newsubscriber = new Subscriber({email})
+      await newsubscriber.save()
+
+        res.status(201).json({
+            message: 'subscribed successfully',
+            newsubscriber,
             status: 201,
             meaning: 'created'
         })
