@@ -55,7 +55,7 @@ const note = mongoose.Schema({
     },
     images: [
         {
-            url: {
+            image: {
                 type: String,
                 required:true
             },

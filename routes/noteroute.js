@@ -90,14 +90,21 @@ router.post('/saveimages', upload.array('images', 15), async (req, res) => {
         const images = await Promise.all(req.files.map(async (file, index) => {
 
             // CLOUDINARY IMAGES UPLOAD-----------------------------
-            // const result = await cloudinary.uploader.upload(file.path, { folder: 'notes' });
-            // const imgurl = result.secure_url;
-            const imgurl = 'anurl';
+            const result = await cloudinary.uploader.upload(file.path, {
+                folder: 'notes',
+                transformation: [
+                    { width: 800, height: 600, crop: 'fill', aspect_ratio: '4:2' }
+                ]
+            });
+
+            const imgurl = result.secure_url;
+
+            // const imgurl = 'anurl';
 
             // creating a name to put in the blog during entry -  to be parsed with image urls later on render
             const img = `_root_i_${index + 1}`
 
-            
+
 
             const image = {
                 url: imgurl || '',
@@ -110,7 +117,7 @@ router.post('/saveimages', upload.array('images', 15), async (req, res) => {
             await fse.unlink(file.path);
         }
         ));
-        
+
         console.log("🚀 ~ file: noteroute.js:107 ~ images ~ imageurls:", imageurls)
         if (imageurls.length === req.files.length) {
             return res.status(201).json({
@@ -165,7 +172,7 @@ router.post('/savenote', async (req, res, next) => {
             subcategory: subcategory || '',
             intro,
             content,
-            keywords:keywords.split(',') || '',
+            keywords: keywords.split(',') || '',
             readtime,
             images,
         })
@@ -420,7 +427,7 @@ router.post('/changereview', async (req, res) => {
 // publishing the note from the draft
 router.post('/addsubscribe', async (req, res) => {
     try {
-        const { name,email } = req.body
+        const { name, email } = req.body
         const subscriber = await Note.findOne({ email })
 
         if (subscriber) {
@@ -431,8 +438,8 @@ router.post('/addsubscribe', async (req, res) => {
             })
         }
 
-      const newsubscriber = new Subscriber({email})
-      await newsubscriber.save()
+        const newsubscriber = new Subscriber({ email })
+        await newsubscriber.save()
 
         res.status(201).json({
             message: 'subscribed successfully',
