@@ -274,7 +274,7 @@ router.post('/getanote', async (req, res) => {
         const { noteid } = req.body
         console.log("🚀 ~ file: noteroute.js:275 ~ router.post ~ noteid:", noteid)
         // console.log("🚀 ~ file: noteroute.js:275 ~ router.post ~ id:", noteid)
-        const note = await Note.findOne({ _id:noteid })
+        const note = await Note.findOne({ _id: noteid })
         console.log("🚀 ~ file: noteroute.js:277 ~ router.post ~ note:", note)
 
         // if note is not there, return the whole process without any data
@@ -342,6 +342,12 @@ router.post('/getnotesbycategory', async (req, res) => {
 router.get('/getallnotes', async (req, res) => {
     try {
         const allnotes = await Note.find({ review: false })
+            .sort({ date: -1 }) // Sort by createdAt field in descending order
+            .limit(6) // Return only the latest 6 notes
+            .exec(); // Execute the query to get the notes
+
+        const reversedNotes = allnotes.reverse();
+
         if (!allnotes) {
             return res.status(400).json({
                 message: 'Unable to fetch the notes',
@@ -351,7 +357,7 @@ router.get('/getallnotes', async (req, res) => {
         }
 
         return res.status(200).json({
-            allnotes: allnotes,
+            allnotes: reversedNotes,
             message: 'note fetched successfully',
             status: 200,
             meaning: 'ok'
