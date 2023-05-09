@@ -462,59 +462,37 @@ router.post('/addsubscribe', async (req, res) => {
 router.post('/addvote', async (req, res) => {
     // console.log(req.body.id)
 
-    const { noteid, vote, uniqueid } = req.body
+    try {
+        const { id, uniqueid } = req.body
 
-    // console.log(vote)
+        // console.log(vote)
 
-    const note = await Note.findOne({ _id: noteid })
+        const note = await Note.findOne({ _id: id })
 
-    if (note) {
-        if (vote === 'up') {
-            const saveup = await note.addUpvote(uniqueid)
-        } else if (vote === 'down') {
-            const savedown = await note.addDownvote(uniqueid)
+        if (note) {
+            if (note.upvote.includes(uniqueid)) {
+                note.upvote.pull(uniqueid)
+            } else {
+                note.upvote.push(uniqueid)
+            }
         }
 
-        const savethevote = await note.save()
+        await note.save()
 
-        // const db = dbConnection.db; // access the underlying db object
+        return res.status(201).json({
+            message: 'voted successfully',
+            note,
+            status: 201,
+            meaning: 'created'
+        })
 
-        // const notesCollection = db.collection('notes');
-
-        // const changeStream = notesCollection.watch({}, { fullDocument: 'updateLookup' });
-        // changeStream.on('change', (change) => {
-        //   console.log('New document:', change);
-        // });
-
-        const votestatus = {
-            upvotes: savethevote.upvote,
-            downvotes: savethevote.downvote
-        }
-
-        pusher.trigger("my-channel", "my-event", {
-            message: votestatus
-        });
-
-
-        // console.log(savethevote)
-
-        // if (savethevote) {
-        //     res.status(201).json({
-        //         votestatus: votestatus,
-        //         message: 'vote addded successfully',
-        //         status: 201,
-        //         meaning: 'created'
-        //     })
-        // } else {
-        //     res.status(400).json({
-        //         message: 'Unable to add the vote',
-        //         status: 400,
-        //         meaning: 'badrequest'
-        //     })
-        // }
+    } catch (error) {
+        return res.status(501).json({
+            message: error.message,
+            status: 501,
+            meaning: 'internalerror'
+        })
     }
-
-
 })
 /* DISCARDED FOR NOW */
 
