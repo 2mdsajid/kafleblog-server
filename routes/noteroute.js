@@ -271,11 +271,15 @@ router.post('/addcomment', async (req, res) => {
 router.post('/getanote', async (req, res) => {
 
     try {
-        const { id } = req.body
-        const note = await Note.findOne({ _id: id })
+        const { noteid } = req.body
+        console.log("🚀 ~ file: noteroute.js:275 ~ router.post ~ noteid:", noteid)
+        // console.log("🚀 ~ file: noteroute.js:275 ~ router.post ~ id:", noteid)
+        const note = await Note.findOne({ _id:noteid })
+        console.log("🚀 ~ file: noteroute.js:277 ~ router.post ~ note:", note)
 
         // if note is not there, return the whole process without any data
         if (!note) {
+            console.log("🚀 ~ bad rreqte:", note)
             return res.status(400).json({
                 message: 'Unable to fetch the note! check your credentials',
                 status: 400,
@@ -305,8 +309,8 @@ router.post('/getanote', async (req, res) => {
 router.post('/getnotesbycategory', async (req, res) => {
 
     try {
-        const { notecategory } = req.body
-        const notes = await Note.find({ category: notecategory })
+        const { category } = req.body
+        const notes = await Note.find({ category: category })
 
         if (!notes) {
             return res.status(400).json({
