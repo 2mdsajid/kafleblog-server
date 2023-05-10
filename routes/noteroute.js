@@ -93,7 +93,7 @@ router.post('/saveimages', upload.array('images', 15), async (req, res) => {
             const result = await cloudinary.uploader.upload(file.path, {
                 folder: 'notes',
                 transformation: [
-                    { width: 800, height: 600, crop: 'fill', aspect_ratio: '4:2' }
+                    { width: 800, height: 600, crop: 'fill', aspect_ratio: '4:3' }
                 ]
             });
 
@@ -274,7 +274,7 @@ router.post('/getanote', async (req, res) => {
         const { noteid } = req.body
         console.log("🚀 ~ file: noteroute.js:275 ~ router.post ~ noteid:", noteid)
         // console.log("🚀 ~ file: noteroute.js:275 ~ router.post ~ id:", noteid)
-        const note = await Note.findOne({ _id: noteid })
+        const note = await Note.findOne({ noteid: noteid })
         console.log("🚀 ~ file: noteroute.js:277 ~ router.post ~ note:", note)
 
         // if note is not there, return the whole process without any data
