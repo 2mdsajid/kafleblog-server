@@ -11,6 +11,18 @@ const Pusher = require("pusher");
 
 // const User = require('../schemas/UserSchems')
 const Note = require('../schema/noteSchems')
+const Subscribers = require('../schema/subscriberSchema')
+
+// nodemailer cofnigurration
+const nodemailer = require('nodemailer');
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: 'livingasrb007@gmail.com',
+        pass: 'iddtzfwzeecehxrl'
+    }
+});
+
 
 
 /* PUSHER--------- */
@@ -469,7 +481,7 @@ router.post('/changereview', async (req, res) => {
 router.post('/addsubscribe', async (req, res) => {
     try {
         const { name, email } = req.body
-        const subscriber = await Note.findOne({ email })
+        const subscriber = await Subscribers.findOne({ email })
 
         if (subscriber) {
             return res.status(401).json({
@@ -479,8 +491,44 @@ router.post('/addsubscribe', async (req, res) => {
             })
         }
 
-        const newsubscriber = new Subscriber({ email })
+        const newsubscriber = new Subscriber({
+            email,
+            name: name || ''
+        })
         await newsubscriber.save()
+        console.log("🚀 ~ file: noteroute.js:497 ~ router.post ~ newsubscriber:", newsubscriber)
+        
+
+        const mailOptions = {
+            from: 'livingasrb007@gmail.com',
+            to: email,
+            subject: 'Friday Soup Subscriber',
+            html: `<div style="background-color:#F8FAFC;padding:32px">
+            <div style="background-color:#FFFFFF;border-radius:16px;padding:32px;text-align:center">
+              <img src="https://example.com/logo.png" alt="Friday Soup Logo" style="width: 128px">
+              <h2 style="font-size:28px;font-weight:bold;margin:24px 0 16px">Welcome to Friday Soup!</h2>
+              <p style="font-size:16px;margin-bottom:32px">
+                Hi ${name},<br>
+                Thank you for subscribing to our weekly newsletter, Friday Soup. Our newsletter provides updates on AI advancements in medicine, industry trends, and other relevant topics. Stay informed and up-to-date on the latest developments in this exciting field by reading Friday Soup every week.
+              </p>
+              <a href="${process.env.BASE_URL}/unsubscribe/${email}"
+                 style="display:inline-block;background-color:#6C63FF;color:#FFFFFF;font-weight:bold;font-size:16px;padding:16px 32px;border-radius:8px;text-decoration:none;cursor:pointer">
+                Unsubscribe
+              </a>
+            </div>
+          </div>`,
+        };
+
+        try {
+            await transporter.sendMail(mailOptions);
+            console.log(`Email sent to ${email}`);
+        } catch (error) {
+            if (error.message.includes("Invalid recipient")) {
+                console.log(`Wrong email address: ${email}`);
+            } else {
+                console.log(error);
+            }
+        }
 
         res.status(201).json({
             message: 'subscribed successfully',
