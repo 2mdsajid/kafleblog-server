@@ -339,7 +339,7 @@ router.post('/getnotesbycategory', async (req, res) => {
 })
 
 // const User = mongoose.model('User', User);
-router.get('/getallnotes', async (req, res) => {
+router.get('/getrecentnotes', async (req, res) => {
     try {
         const allnotes = await Note.find({ review: false })
             .sort({ date: -1 }) // Sort by createdAt field in descending order
@@ -358,6 +358,37 @@ router.get('/getallnotes', async (req, res) => {
 
         return res.status(200).json({
             allnotes: reversedNotes,
+            message: 'note fetched successfully',
+            status: 200,
+            meaning: 'ok'
+        })
+
+    } catch (error) {
+        return res.status(501).json({
+            message: error.message,
+            status: 501,
+            meaning: 'internalerror'
+        })
+    }
+})
+
+// const User = mongoose.model('User', User);
+router.get('/getallnotes', async (req, res) => {
+    console.log('back get all notes')
+    try {
+        const allnotes = await Note.find({ review: false })
+        console.log("🚀 ~ file: noteroute.js:380 ~ router.get ~ allnotes:", allnotes)
+
+        if (!allnotes) {
+            return res.status(400).json({
+                message: 'Unable to fetch the notes',
+                status: 400,
+                meaning: 'badrequest'
+            })
+        }
+
+        return res.status(200).json({
+            allnotes,
             message: 'note fetched successfully',
             status: 200,
             meaning: 'ok'
