@@ -5,17 +5,9 @@ const visitorSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  ipaddress: {
-    type: String,
-    required: true
-  },
-  useragent: {
-    type: String,
-    required: true
-  },
   timestamp: {
     type: Date,
-    required: true
+    default: Date.now,
   }
 });
 

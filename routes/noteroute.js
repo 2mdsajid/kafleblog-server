@@ -13,6 +13,7 @@ const Pusher = require("pusher");
 const Note = require('../schema/noteSchems')
 const Subscribers = require('../schema/subscriberSchema')
 const Feedback = require('../schema/feedbackSchema')
+const Visitor = require('../schema/visitorSchema')
 
 // nodemailer cofnigurration
 const nodemailer = require('nodemailer');
@@ -130,8 +131,6 @@ router.post('/saveimages', upload.array('images', 15), async (req, res) => {
             await fse.unlink(file.path);
         }
         ));
-
-        console.log("🚀 ~ file: noteroute.js:107 ~ images ~ imageurls:", imageurls)
         if (imageurls.length === req.files.length) {
             return res.status(201).json({
                 message: 'Note addded successfully',
@@ -172,8 +171,6 @@ router.post('/savenote', async (req, res, next) => {
         readtime,
         images,
     } = req.body
-    console.log("🚀 ~ file: noteroute.js:154 ~ router.post ~ req.body:", req.body)
-
 
 
     try {
@@ -193,8 +190,6 @@ router.post('/savenote', async (req, res, next) => {
         // return res.json({newnote})
 
         const savednote = await newnote.save()
-        console.log("🚀 ~ file: noteroute.js:175 ~ router.post ~ savednote:", savednote)
-
         // checking for error while uploading
         if (savednote) {
             // const user = await User.findOne({ _id: userid })
@@ -285,14 +280,9 @@ router.post('/getanote', async (req, res) => {
 
     try {
         const { noteid } = req.body
-        console.log("🚀 ~ file: noteroute.js:275 ~ router.post ~ noteid:", noteid)
-        // console.log("🚀 ~ file: noteroute.js:275 ~ router.post ~ id:", noteid)
         const note = await Note.findOne({ noteid: noteid })
-        console.log("🚀 ~ file: noteroute.js:277 ~ router.post ~ note:", note)
-
         // if note is not there, return the whole process without any data
         if (!note) {
-            console.log("🚀 ~ bad rreqte:", note)
             return res.status(400).json({
                 message: 'Unable to fetch the note! check your credentials',
                 status: 400,
@@ -390,8 +380,6 @@ router.get('/getallnotes', async (req, res) => {
     console.log('back get all notes')
     try {
         const allnotes = await Note.find({ review: false })
-        console.log("🚀 ~ file: noteroute.js:380 ~ router.get ~ allnotes:", allnotes)
-
         if (!allnotes) {
             return res.status(400).json({
                 message: 'Unable to fetch the notes',
@@ -497,8 +485,6 @@ router.post('/addsubscribe', async (req, res) => {
             name: name || ''
         })
         await newsubscriber.save()
-        console.log("🚀 ~ file: noteroute.js:497 ~ router.post ~ newsubscriber:", newsubscriber)
-
 
         const mailOptions = {
             from: 'livingasrb007@gmail.com',
@@ -594,11 +580,11 @@ router.post('/addfeedback', async (req, res) => {
 
         const newfeedback = new Feedback({
             email,
-            name: name || ''
+            name: name || '',
+            feedback
         })
-        await newfeedback.save()
-        console.log("🚀 ~ file: noteroute.js:497 ~ router.post ~ newsubscriber:", newfeedback)
 
+        await newfeedback.save()
 
         const mailOptions = {
             from: 'livingasrb007@gmail.com',
@@ -626,9 +612,48 @@ router.post('/addfeedback', async (req, res) => {
             }
         }
 
+        
         res.status(201).json({
             message: 'feedback received ',
             newfeedback,
+            status: 201,
+            meaning: 'created'
+        })
+
+    } catch (error) {
+        return res.status(501).json({
+            message: error.message,
+            status: 501,
+            meaning: 'internalerror'
+        })
+    }
+})
+
+// add visitors
+router.post('/addvisitor', async (req, res) => {
+    try {
+        const { uniqueid } = req.body
+
+        let newvisitor
+
+        newvisitor =await Visitor.findOne({ uniqueid:uniqueid })
+        console.log("🚀 ~ file: noteroute.js:637 ~ router.post ~ newvisitor:", newvisitor)
+
+        if (newvisitor) {
+            return res.status(400).json({
+                message: 'aleady visited'
+            })
+        }
+
+        newvisitor = new Visitor({
+            uniqueid
+        })
+
+        await newvisitor.save()
+        console.log("🚀 ~ file: noteroute.js:649 ~ router.post ~ newvisitor:", newvisitor)
+        res.status(201).json({
+            message: 'visitor added ',
+            newvisitor,
             status: 201,
             meaning: 'created'
         })
