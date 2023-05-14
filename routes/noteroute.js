@@ -12,6 +12,7 @@ const Pusher = require("pusher");
 // const User = require('../schemas/UserSchems')
 const Note = require('../schema/noteSchems')
 const Subscribers = require('../schema/subscriberSchema')
+const Feedback = require('../schema/feedbackSchema')
 
 // nodemailer cofnigurration
 const nodemailer = require('nodemailer');
@@ -497,7 +498,7 @@ router.post('/addsubscribe', async (req, res) => {
         })
         await newsubscriber.save()
         console.log("🚀 ~ file: noteroute.js:497 ~ router.post ~ newsubscriber:", newsubscriber)
-        
+
 
         const mailOptions = {
             from: 'livingasrb007@gmail.com',
@@ -547,6 +548,7 @@ router.post('/addsubscribe', async (req, res) => {
 })
 
 
+
 /* DISCARDED FOR NOW */
 router.post('/addvote', async (req, res) => {
     // console.log(req.body.id)
@@ -583,6 +585,61 @@ router.post('/addvote', async (req, res) => {
         })
     }
 })
-/* DISCARDED FOR NOW */
+
+
+// add feedback and mail it to the owner
+router.post('/addfeedback', async (req, res) => {
+    try {
+        const { name, email, feedback } = req.body
+
+        const newfeedback = new Feedback({
+            email,
+            name: name || ''
+        })
+        await newfeedback.save()
+        console.log("🚀 ~ file: noteroute.js:497 ~ router.post ~ newsubscriber:", newfeedback)
+
+
+        const mailOptions = {
+            from: 'livingasrb007@gmail.com',
+            to: 'aayushmakafle019@gmail.com',
+            subject: 'Website Feedback From a Visitor',
+            html: `<div style="background-color:#F8FAFC;padding:32px">
+            <div style="background-color:#FFFFFF;border-radius:16px;padding:32px;text-align:center">
+              <h2 style="font-size:28px;font-weight:bold;margin:0 0 16px">Feedback</h2>
+              <p style="font-size:16px;margin-bottom:16px">Name: ${name}</p>
+              <p style="font-size:16px;margin-bottom:16px">Email: ${email}</p>
+              <p style="font-size:16px;margin-bottom:32px">Feedback: ${feedback}</p>
+            </div>
+          </div>
+          `,
+        };
+
+        try {
+            await transporter.sendMail(mailOptions);
+            console.log(`Email sent to ${email}`);
+        } catch (error) {
+            if (error.message.includes("Invalid recipient")) {
+                console.log(`Wrong email address: ${email}`);
+            } else {
+                console.log(error);
+            }
+        }
+
+        res.status(201).json({
+            message: 'feedback received ',
+            newfeedback,
+            status: 201,
+            meaning: 'created'
+        })
+
+    } catch (error) {
+        return res.status(501).json({
+            message: error.message,
+            status: 501,
+            meaning: 'internalerror'
+        })
+    }
+})
 
 module.exports = router
