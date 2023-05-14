@@ -280,7 +280,7 @@ router.post('/getanote', async (req, res) => {
 
     try {
         const { noteid } = req.body
-        const note = await Note.findOne({ noteid: noteid })
+        const note = await Note.findOne({ noteid: noteid, review:false })
         // if note is not there, return the whole process without any data
         if (!note) {
             return res.status(400).json({
@@ -313,7 +313,7 @@ router.post('/getnotesbycategory', async (req, res) => {
 
     try {
         const { category } = req.body
-        const notes = await Note.find({ category: category })
+        const notes = await Note.find({ category: category, review:false })
 
         if (!notes) {
             return res.status(400).json({
@@ -432,6 +432,41 @@ router.get('/getreviewnotes', async (req, res) => {
     }
 })
 
+// delete a  note
+router.post('/deletenote', async (req, res) => {
+    const {noteid} = req.body;
+    console.log("🚀 ~ file: noteroute.js:438 ~ router.delete ~ noteid:", noteid)
+  
+    try {
+      const noteToDelete = await Note.findById(noteid);
+  
+      if (!noteToDelete) {
+        return res.status(404).json({
+          message: 'Note not found',
+          status: 404,
+          meaning: 'notfound'
+        });
+      }
+       noteToDelete.review = true;
+       await noteToDelete.save()
+    //   await Note.findByIdAndDelete(id);
+  
+      return res.status(200).json({
+        message: 'Note deleted successfully',
+        status: 200,
+        meaning: 'ok'
+      });
+  
+    } catch (error) {
+      return res.status(501).json({
+        message: error.message,
+        status: 501,
+        meaning: 'internalerror'
+      });
+    }
+  });
+  
+
 // publishing the note from the draft
 router.post('/changereview', async (req, res) => {
     try {
@@ -446,7 +481,7 @@ router.post('/changereview', async (req, res) => {
             })
         }
 
-        note.review = false //dont use AWAIT while updating any state in database
+        note.review = true //dont use AWAIT while updating any state in database
         const savednote = await note.save()
 
         res.status(201).json({
