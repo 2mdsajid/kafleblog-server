@@ -3,15 +3,15 @@ const mongoose = require("mongoose")
 const note = mongoose.Schema({
     title: {
         type: String,
-        required: true
+        required: false
     },
     noteid: {
         type: String,
-        required: true
+        required: false
     },
     category: {
         type: String,
-        required: true
+        required: false
     },
     subcategory: {
         type: String,
@@ -23,11 +23,11 @@ const note = mongoose.Schema({
     },
     intro: {
         type: String,
-        required: true
+        required: false
     },
     content: {
         type: String,
-        required: true
+        required: false
     },
     review: {
         type: Boolean,
@@ -38,8 +38,8 @@ const note = mongoose.Schema({
         default: true
     },
     keywords: {
-        type: [String],
-        default: []
+        type: String,
+        default: ''
     },
     readtime: {
         type: String,

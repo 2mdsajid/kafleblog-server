@@ -121,10 +121,10 @@ router.post('/saveimages', upload.array('images', 15), async (req, res) => {
 
 
             const image = {
-                url: imgurl || '',
-                // caption: captions[index] || '',
-                // source: sources[index] || '',
-                img
+                image: imgurl || '',
+                caption: '',
+                source: '',
+
             }
 
             imageurls.push(image)
@@ -158,9 +158,93 @@ router.post('/saveimages', upload.array('images', 15), async (req, res) => {
 
 /*  ADDING NOTES TO DATABASE */
 router.post('/savenote', async (req, res, next) => {
+    try {
+        // Get the request body parameters
+        const {
+            id,
+            title,
+            noteid,
+            category,
+            subcategory,
+            intro,
+            content,
+            keywords,
+            readtime,
+            images,
+        } = req.body
+
+        let newnote
+
+        if (id) {
+            newnote = await Note.findById(id);
+        }
+
+
+        if (newnote) {
+            // Update existing note
+            console.log('old')
+            newnote.title = title;
+            newnote.noteid = noteid;
+            newnote.category = category;
+            newnote.subcategory = subcategory || '';
+            newnote.intro = intro;
+            newnote.review = false;
+            newnote.published = true;
+            newnote.content = content;
+            newnote.keywords = keywords || '';
+            newnote.readtime = readtime;
+            newnote.images = images;
+
+            console.log('new note not')
+
+            const saved = await newnote.save();
+        } else {
+            // Create new note
+            console.log('new')
+            newnote = new Note({
+                title,
+                noteid,
+                category,
+                subcategory: subcategory || '',
+                intro,
+                content,
+                review: false,
+                published: true,
+                keywords: keywords || '',
+                readtime,
+                images,
+            });
+            await newnote.save();
+        }
+
+        // Handle success response
+
+        console.log('newnote')
+        return res.status(200).json({
+            message: 'Note saved successfully',
+            status: 200,
+            meaning: 'ok',
+            note: newnote,
+        });
+    } catch (error) {
+        // Handle error response
+        return res.status(500).json({
+            message: 'Error saving note',
+            status: 500,
+            meaning: 'internalerror',
+            error: error.message,
+        });
+    }
+
+})
+
+
+/*  ADDING NOTES TO DRAFT */
+router.post('/savedraft', async (req, res, next) => {
 
     // Get the request body parameters
     const {
+        id,
         title,
         noteid,
         category,
@@ -172,47 +256,58 @@ router.post('/savenote', async (req, res, next) => {
         images,
     } = req.body
 
+    let newnote
 
     try {
-        // saving the data into mongo database
-        const newnote = new Note({
-            title,
-            noteid,
-            category,
-            subcategory: subcategory || '',
-            intro,
-            content,
-            keywords: keywords.split(',') || '',
-            readtime,
-            images,
-        })
 
-        // return res.json({newnote})
-
-        const savednote = await newnote.save()
-        // checking for error while uploading
-        if (savednote) {
-            // const user = await User.findOne({ _id: userid })
-
-            // if (user) {
-            //     const savenote = await user.addNote(title, savenewnote._id, intro)
-            //     const savethenote = await user.save()
-            // }
-
-            res.status(201).json({
-                message: 'Note addded successfully',
-                status: 201,
-                savednote,
-                meaning: 'created'
-            })
-
-        } else {
-            res.status(400).json({
-                message: 'Unable to add the note ',
-                status: 400,
-                meaning: 'badrequest'
-            })
+        if (id) {
+            newnote = await Note.findById(id);
         }
+
+        if (newnote) {
+            // Update existing note
+            console.log('old')
+            newnote.title = title;
+            newnote.noteid = noteid;
+            newnote.category = category;
+            newnote.subcategory = subcategory || '';
+            newnote.intro = intro;
+            newnote.review = true;
+            newnote.published = false;
+            newnote.content = content;
+            newnote.keywords = keywords || '';
+            newnote.readtime = readtime;
+            newnote.images = images;
+
+            const saved = await newnote.save();
+        } else {
+            // Create new note
+            console.log('new')
+            newnote = new Note({
+                title,
+                noteid,
+                category,
+                subcategory: subcategory || '',
+                intro,
+                content,
+                review: true,
+                published: false,
+                keywords: keywords || '',
+                readtime,
+                images,
+            });
+
+            await newnote.save();
+        }
+
+        return res.status(200).json({
+            message: 'Note drafted successfully',
+            status: 200,
+            meaning: 'ok',
+            note: newnote,
+        });
+
+
     } catch (error) {
         console.log(error)
         res.status(501).json({
@@ -221,7 +316,10 @@ router.post('/savenote', async (req, res, next) => {
             meaning: 'internal server error'
         })
     }
+
 })
+
+
 
 // ADDING COMMENTS TO THE NOTE
 router.post('/addcomment', async (req, res) => {
@@ -307,6 +405,35 @@ router.post('/getanote', async (req, res) => {
     }
 
 })
+
+router.get('/getnotebyid/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const note = await Note.findOne({ _id: id });
+
+        // if note is not there, return the whole process without any data
+        if (!note) {
+            return res.status(400).json({
+                message: 'Unable to fetch the note! Check your credentials',
+                status: 400,
+                meaning: 'badrequest'
+            });
+        }
+
+        res.status(200).json({
+            note,
+            message: 'Note fetched successfully',
+            status: 200,
+            meaning: 'ok'
+        });
+    } catch (error) {
+        return res.status(501).json({
+            message: error.message,
+            status: 501,
+            meaning: 'internalerror'
+        });
+    }
+});
 
 // get all note of the category
 router.post('/getnotesbycategory', async (req, res) => {
@@ -464,18 +591,14 @@ router.get('/getreviewnotes', async (req, res) => {
 // delete a  note
 router.post('/deletenote', async (req, res) => {
     const { id } = req.body;
-    console.log("🚀 ~ file: noteroute.js:438 ~ router.delete ~ noteid:", id)
-
     try {
         const noteToDelete = await Note.findById(id);
-        console.log("🚀 ~ file: noteroute.js:471 ~ router.post ~ noteToDelete:", noteToDelete)
-
-        return res.status(200).json({
-            message: 'Note deleted successfully',
-            note: noteToDelete,
-            status: 200,
-            meaning: 'ok'
-        });
+        // return res.status(200).json({
+        //     message: 'Note deleted successfully',
+        //     note: noteToDelete,
+        //     status: 200,
+        //     meaning: 'ok'
+        // });
 
         if (!noteToDelete) {
             return res.status(404).json({
@@ -484,8 +607,7 @@ router.post('/deletenote', async (req, res) => {
                 meaning: 'notfound'
             });
         }
-        //    noteToDelete.review = true;
-        //    await noteToDelete.save()
+
         await Note.findByIdAndDelete(id);
 
         return res.status(200).json({
@@ -709,8 +831,6 @@ router.post('/addvisitor', async (req, res) => {
         let newvisitor
 
         newvisitor = await Visitor.findOne({ uniqueid: uniqueid })
-        console.log("🚀 ~ file: noteroute.js:637 ~ router.post ~ newvisitor:", newvisitor)
-
         if (newvisitor) {
             return res.status(400).json({
                 message: 'aleady visited'
@@ -722,7 +842,6 @@ router.post('/addvisitor', async (req, res) => {
         })
 
         await newvisitor.save()
-        console.log("🚀 ~ file: noteroute.js:649 ~ router.post ~ newvisitor:", newvisitor)
         res.status(201).json({
             message: 'visitor added ',
             newvisitor,
