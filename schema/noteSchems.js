@@ -35,7 +35,7 @@ const note = mongoose.Schema({
     },
     published: {
         type: Boolean,
-        default: false
+        default: true
     },
     keywords: {
         type: [String],

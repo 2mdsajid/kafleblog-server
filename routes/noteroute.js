@@ -280,7 +280,7 @@ router.post('/getanote', async (req, res) => {
 
     try {
         const { noteid } = req.body
-        const note = await Note.findOne({ noteid: noteid, review:false })
+        const note = await Note.findOne({ noteid: noteid, review: false })
         // if note is not there, return the whole process without any data
         if (!note) {
             return res.status(400).json({
@@ -313,7 +313,7 @@ router.post('/getnotesbycategory', async (req, res) => {
 
     try {
         const { category } = req.body
-        const notes = await Note.find({ category: category, review:false })
+        const notes = await Note.find({ category: category, review: false })
 
         if (!notes) {
             return res.status(400).json({
@@ -376,10 +376,39 @@ router.get('/getrecentnotes', async (req, res) => {
 })
 
 // const User = mongoose.model('User', User);
-router.get('/getallnotes', async (req, res) => {
+router.get('/getpublishednotes', async (req, res) => {
     console.log('back get all notes')
     try {
         const allnotes = await Note.find({ review: false })
+        if (!allnotes) {
+            return res.status(400).json({
+                message: 'Unable to fetch the notes',
+                status: 400,
+                meaning: 'badrequest'
+            })
+        }
+
+        return res.status(200).json({
+            allnotes,
+            message: 'note fetched successfully',
+            status: 200,
+            meaning: 'ok'
+        })
+
+    } catch (error) {
+        return res.status(501).json({
+            message: error.message,
+            status: 501,
+            meaning: 'internalerror'
+        })
+    }
+})
+
+// get all notes --- published, not published, drafted
+router.get('/getallnotes', async (req, res) => {
+    console.log('back get all notes')
+    try {
+        const allnotes = await Note.find()
         if (!allnotes) {
             return res.status(400).json({
                 message: 'Unable to fetch the notes',
@@ -434,38 +463,46 @@ router.get('/getreviewnotes', async (req, res) => {
 
 // delete a  note
 router.post('/deletenote', async (req, res) => {
-    const {noteid} = req.body;
-    console.log("🚀 ~ file: noteroute.js:438 ~ router.delete ~ noteid:", noteid)
-  
+    const { id } = req.body;
+    console.log("🚀 ~ file: noteroute.js:438 ~ router.delete ~ noteid:", id)
+
     try {
-      const noteToDelete = await Note.findById(noteid);
-  
-      if (!noteToDelete) {
-        return res.status(404).json({
-          message: 'Note not found',
-          status: 404,
-          meaning: 'notfound'
+        const noteToDelete = await Note.findById(id);
+        console.log("🚀 ~ file: noteroute.js:471 ~ router.post ~ noteToDelete:", noteToDelete)
+
+        return res.status(200).json({
+            message: 'Note deleted successfully',
+            note: noteToDelete,
+            status: 200,
+            meaning: 'ok'
         });
-      }
-       noteToDelete.review = true;
-       await noteToDelete.save()
-    //   await Note.findByIdAndDelete(id);
-  
-      return res.status(200).json({
-        message: 'Note deleted successfully',
-        status: 200,
-        meaning: 'ok'
-      });
-  
+
+        if (!noteToDelete) {
+            return res.status(404).json({
+                message: 'Note not found',
+                status: 404,
+                meaning: 'notfound'
+            });
+        }
+        //    noteToDelete.review = true;
+        //    await noteToDelete.save()
+        await Note.findByIdAndDelete(id);
+
+        return res.status(200).json({
+            message: 'Note deleted successfully',
+            status: 200,
+            meaning: 'ok'
+        });
+
     } catch (error) {
-      return res.status(501).json({
-        message: error.message,
-        status: 501,
-        meaning: 'internalerror'
-      });
+        return res.status(501).json({
+            message: error.message,
+            status: 501,
+            meaning: 'internalerror'
+        });
     }
-  });
-  
+});
+
 
 // publishing the note from the draft
 router.post('/changereview', async (req, res) => {
@@ -647,7 +684,7 @@ router.post('/addfeedback', async (req, res) => {
             }
         }
 
-        
+
         res.status(201).json({
             message: 'feedback received ',
             newfeedback,
@@ -671,7 +708,7 @@ router.post('/addvisitor', async (req, res) => {
 
         let newvisitor
 
-        newvisitor =await Visitor.findOne({ uniqueid:uniqueid })
+        newvisitor = await Visitor.findOne({ uniqueid: uniqueid })
         console.log("🚀 ~ file: noteroute.js:637 ~ router.post ~ newvisitor:", newvisitor)
 
         if (newvisitor) {
