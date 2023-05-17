@@ -887,4 +887,27 @@ router.post('/addvisitor', async (req, res) => {
     }
 })
 
+
+// get visitors
+router.get('/getvisitors', async (req, res) => {
+    try {
+        
+        const visitors = await newVisitor.find()
+
+       return res.status(201).json({
+            message: 'visitor added ',
+            visitors,
+            status: 201,
+            meaning: 'created'
+        })
+
+    } catch (error) {
+        return res.status(501).json({
+            message: error.message,
+            status: 501,
+            meaning: 'internalerror'
+        })
+    }
+})
+
 module.exports = router
