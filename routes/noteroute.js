@@ -859,12 +859,12 @@ router.post('/addvisitor', async (req, res) => {
             }
 
             return res.status(400).json({
-                message: 'Already visited',
+                message: 'Already visited byt his user',
                 ip
             });
         }
 
-        newvisitor = new Visitor({
+        newvisitor = new newVisitor({
             uniqueid,
             useragent,
             ip
