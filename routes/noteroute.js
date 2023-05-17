@@ -14,6 +14,7 @@ const Note = require('../schema/noteSchems')
 const Subscribers = require('../schema/subscriberSchema')
 const Feedback = require('../schema/feedbackSchema')
 const Visitor = require('../schema/visitorSchema')
+const newVisitor = require('../schema/newVisitorSchema')
 
 // nodemailer cofnigurration
 const nodemailer = require('nodemailer');
@@ -42,6 +43,24 @@ cloudinary.config({
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
+
+
+const migrateVisitor = async () => {
+    const visitors = await Visitor.find()
+
+    visitors.map(async (visitor) => {
+        const newvisitor = new newVisitor({
+            uniqueid: visitor.uniqueid,
+            useragent: '',
+            ip: '',
+            timestamp: visitor.timestamp
+        })
+
+        await newvisitor.save()
+    })
+}
+
+// migrateVisitor()
 
 
 /* MULTER  */
@@ -826,19 +845,29 @@ router.post('/addfeedback', async (req, res) => {
 // add visitors
 router.post('/addvisitor', async (req, res) => {
     try {
-        const { uniqueid } = req.body
+        const { uniqueid, ip, useragent } = req.body
 
         let newvisitor
 
-        newvisitor = await Visitor.findOne({ uniqueid: uniqueid })
+        newvisitor = await newVisitor.findOne({ uniqueid: uniqueid })
+
         if (newvisitor) {
+            if (!newvisitor.ip || !newvisitor.useragent) {
+                newvisitor.ip = ip;
+                newvisitor.useragent = useragent;
+                await newvisitor.save();
+            }
+
             return res.status(400).json({
-                message: 'aleady visited'
-            })
+                message: 'Already visited',
+                ip
+            });
         }
 
         newvisitor = new Visitor({
-            uniqueid
+            uniqueid,
+            useragent,
+            ip
         })
 
         await newvisitor.save()
