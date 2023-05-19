@@ -9,12 +9,14 @@ const dbConnection = require('../db/mongo');
 const cloudinary = require('cloudinary').v2;
 const Pusher = require("pusher");
 
+const { data } = require('../public/uploads/data')
 // const User = require('../schemas/UserSchems')
 const Note = require('../schema/noteSchems')
 const Subscribers = require('../schema/subscriberSchema')
 const Feedback = require('../schema/feedbackSchema')
 const Visitor = require('../schema/visitorSchema')
 const newVisitor = require('../schema/newVisitorSchema')
+const Quote = require('../schema/quoteSchema')
 
 // nodemailer cofnigurration
 const nodemailer = require('nodemailer');
@@ -61,6 +63,42 @@ const migrateVisitor = async () => {
 }
 
 // migrateVisitor()
+
+
+const addNotes = async () => {
+    data.map(async (da) => {
+        const {
+            title,
+            noteid,
+            category,
+            subcategory,
+            intro,
+            content,
+            keywords,
+            readtime,
+            images,
+        } = da
+
+        const newnote = new Note({
+            title,
+            noteid,
+            category,
+            subcategory: subcategory || '',
+            intro,
+            content,
+            review: false,
+            published: true,
+            keywords: keywords || '',
+            readtime,
+            images,
+        });
+        
+        await newnote.save();
+        console.log("🚀 ~ file: noteroute.js:95 ~ data.map ~ newnote:", newnote)
+    })
+}
+
+// addNotes()
 
 
 /* MULTER  */
@@ -213,8 +251,7 @@ router.post('/savenote', async (req, res, next) => {
             newnote.keywords = keywords || '';
             newnote.readtime = readtime;
             newnote.images = images;
-
-            console.log('new note not')
+            newnote.isupdated.state = true;
 
             const saved = await newnote.save();
         } else {
@@ -297,6 +334,7 @@ router.post('/savedraft', async (req, res, next) => {
             newnote.keywords = keywords || '';
             newnote.readtime = readtime;
             newnote.images = images;
+            newnote.isupdated.state = true;
 
             const saved = await newnote.save();
         } else {
@@ -490,7 +528,7 @@ router.post('/getnotesbycategory', async (req, res) => {
 // const User = mongoose.model('User', User);
 router.get('/getrecentnotes', async (req, res) => {
     try {
-        const allnotes = await Note.find({ review: false })
+        const allnotes = await Note.find({ review: false, published:true })
             .sort({ date: -1 }) // Sort by createdAt field in descending order
             .limit(6) // Return only the latest 6 notes
             .exec(); // Execute the query to get the notes
@@ -554,7 +592,7 @@ router.get('/getpublishednotes', async (req, res) => {
 router.get('/getallnotes', async (req, res) => {
     console.log('back get all notes')
     try {
-        const allnotes = await Note.find()
+        const allnotes = await Note.find({review:false,published:true})
         if (!allnotes) {
             return res.status(400).json({
                 message: 'Unable to fetch the notes',
@@ -891,10 +929,10 @@ router.post('/addvisitor', async (req, res) => {
 // get visitors
 router.get('/getvisitors', async (req, res) => {
     try {
-        
+
         const visitors = await newVisitor.find()
 
-       return res.status(201).json({
+        return res.status(201).json({
             message: 'visitor added ',
             visitors,
             status: 201,
@@ -909,5 +947,57 @@ router.get('/getvisitors', async (req, res) => {
         })
     }
 })
+
+// saving and getting quote from db
+router.post("/getquote", async (req, res) => {
+
+    const { quote } = req.body
+    const targetDate = new Date(); // Specify the target date here
+    targetDate.setHours(0, 0, 0, 0); // Set time to the beginning of the day
+
+    try {
+        const dBquote = await Quote.findOne({
+            date: {
+                $gte: targetDate,
+                $lt: new Date(targetDate.getTime() + 24 * 60 * 60 * 1000)
+            }
+        });
+        if (dBquote) {
+            return res.json({
+                quote: dBquote.quote,
+                isquote: true
+            })
+
+        } else {
+
+            const dBiDquote = await Quote.findOne({ id: quote.id });
+            console.log('new')
+
+            if (!dBiDquote) {
+                // Create a new quote
+                const newQuote = new Quote({
+                    id: quote.id,
+                    quote: quote.quote
+                })
+
+                await newQuote.save()
+
+                res.json({
+                    quote: quote.quote,
+                    isquote: false
+                })
+
+            } else {
+                res.json({
+                    quote: null,
+                    isquote: false
+                });
+            }
+
+        }
+    } catch (error) {
+        res.status(500).json({ message: "Error retrieving quote.", error });
+    }
+});
 
 module.exports = router

@@ -15,7 +15,7 @@ const note = mongoose.Schema({
     },
     subcategory: {
         type: String,
-        default:'',
+        default: '',
     },
     author: {
         type: String,
@@ -53,11 +53,21 @@ const note = mongoose.Schema({
         type: [String],
         default: []
     },
+    isupdated: {
+        state: {
+            type: Boolean,
+            default: false
+        },
+        date: {
+            type: Date,
+            default: Date.now
+        }
+    },
     images: [
         {
             image: {
                 type: String,
-                required:true
+                required: true
             },
             caption: {
                 type: String,
