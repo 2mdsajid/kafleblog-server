@@ -1062,4 +1062,43 @@ router.post('/adminlogin', async (req, res) => {
     }
 });
 
+
+// add views
+/* DISCARDED FOR NOW */
+router.post('/addviews', async (req, res) => {
+    console.log(req.body.id)
+
+    try {
+        const { id } = req.body
+
+        // console.log(vote)
+
+        const note = await Note.findOne({ _id: id })
+        if (!note) {
+            return null
+        }
+
+        note.views = note.views+1
+
+        await note.save()
+
+        return res.status(201).json({
+            message: 'voted successfully',
+            note,
+            status: 201,
+            meaning: 'created'
+        })
+
+    } catch (error) {
+        return res.status(501).json({
+            message: error.message,
+            status: 501,
+            meaning: 'internalerror'
+        })
+    }
+})
+
+
+
+
 module.exports = router
