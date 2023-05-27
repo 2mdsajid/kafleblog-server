@@ -17,6 +17,7 @@ const Feedback = require('../schema/feedbackSchema')
 const Visitor = require('../schema/visitorSchema')
 const newVisitor = require('../schema/newVisitorSchema')
 const Quote = require('../schema/quoteSchema')
+const Admin = require('../schema/adminSchema')
 
 // nodemailer cofnigurration
 const nodemailer = require('nodemailer');
@@ -66,7 +67,7 @@ const migrateVisitor = async () => {
 
 
 const addNotes = async () => {
-    data.map(async (da,index) => {
+    data.map(async (da, index) => {
         const {
             title,
             noteid,
@@ -93,7 +94,7 @@ const addNotes = async () => {
             published: true,
             keywords: keywords || '',
             readtime,
-            introimage:images[0].image,
+            introimage: images[0].image,
         });
 
         await newnote.save();
@@ -1034,5 +1035,31 @@ router.post("/getquote", async (req, res) => {
     }
 });
 
+
+// adminlogin
+router.post('/adminlogin', async (req, res) => {
+    const { username, password } = req.body;
+
+    try {
+        // Find admin with matching username and password
+        const admin = await Admin.findOne({ username, password });
+
+        if (admin) {
+            // Admin found
+            res.status(200).json({
+                isAdmin: true,
+                message: 'Admin login successful'
+            });
+        } else {
+            // Admin not found
+            res.status(401).json({
+                isAdmin: false,
+                message: 'Invalid username or password'
+            });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Error occurred while finding admin' });
+    }
+});
 
 module.exports = router
