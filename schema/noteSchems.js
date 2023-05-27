@@ -29,6 +29,10 @@ const note = mongoose.Schema({
         type: String,
         required: false
     },
+    introimage: {
+        type: String,
+        required: false
+    },
     review: {
         type: Boolean,
         default: false
@@ -63,22 +67,6 @@ const note = mongoose.Schema({
             default: Date.now
         }
     },
-    images: [
-        {
-            image: {
-                type: String,
-                required: true
-            },
-            caption: {
-                type: String,
-                default: ''
-            },
-            source: {
-                type: String,
-                default: ''
-            }
-        }
-    ],
     comments: [
         {
             name: {

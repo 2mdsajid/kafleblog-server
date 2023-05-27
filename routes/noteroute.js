@@ -66,7 +66,7 @@ const migrateVisitor = async () => {
 
 
 const addNotes = async () => {
-    data.map(async (da) => {
+    data.map(async (da,index) => {
         const {
             title,
             noteid,
@@ -78,6 +78,9 @@ const addNotes = async () => {
             readtime,
             images,
         } = da
+        //     console.log("🚀 ~ file: noteroute.js:81 ~ data.map ~ title:", title)
+        // console.log("🚀 ~ file: noteroute.js:81 ~ data.map ~ images:", images[0])
+        // console.log("🚀 ~ file: noteroute.js:70 ~ data.map ~ index:", index)
 
         const newnote = new Note({
             title,
@@ -90,11 +93,11 @@ const addNotes = async () => {
             published: true,
             keywords: keywords || '',
             readtime,
-            images,
+            introimage:images[0].image,
         });
-        
+
         await newnote.save();
-        console.log("🚀 ~ file: noteroute.js:95 ~ data.map ~ newnote:", newnote)
+        console.log("🚀 ~ file: noteroute.js:95 ~ data.map ~ newnote:", newnote.title)
     })
 }
 
@@ -136,12 +139,15 @@ const setDirectory = () => {
     return multer({
         storage: storage,
         fileFilter: (req, file, cb) => {
-            // Checking if the uploaded file is a valid image file
-            // console.log('dest begins')
-            if (['image/png', 'image/jpg', 'image/jpeg', 'image/webp'].includes(file.mimetype)) {
+            // Checking if the uploaded file is a valid image, audio, or video file
+            if (
+                ['image/png', 'image/jpg', 'image/jpeg', 'image/webp'].includes(file.mimetype) ||
+                ['audio/mpeg', 'audio/wav', 'audio/mp3'].includes(file.mimetype) ||
+                ['video/mp4', 'video/mpeg', 'video/quicktime'].includes(file.mimetype)
+            ) {
                 cb(null, true);
             } else {
-                cb(new Error('Only .png, .jpg and .jpeg format allowed!'));
+                cb(new Error('Only .png, .jpg, .jpeg, .webp, .mp3, .wav, .mp4, and .mov formats allowed!'));
             }
         }
     });
@@ -528,7 +534,7 @@ router.post('/getnotesbycategory', async (req, res) => {
 // const User = mongoose.model('User', User);
 router.get('/getrecentnotes', async (req, res) => {
     try {
-        const allnotes = await Note.find({ review: false, published:true })
+        const allnotes = await Note.find({ review: false, published: true })
             .sort({ date: -1 }) // Sort by createdAt field in descending order
             .limit(6) // Return only the latest 6 notes
             .exec(); // Execute the query to get the notes
@@ -592,7 +598,7 @@ router.get('/getpublishednotes', async (req, res) => {
 router.get('/getallnotes', async (req, res) => {
     console.log('back get all notes')
     try {
-        const allnotes = await Note.find({review:false,published:true})
+        const allnotes = await Note.find({ review: false, published: true })
         if (!allnotes) {
             return res.status(400).json({
                 message: 'Unable to fetch the notes',
@@ -604,6 +610,34 @@ router.get('/getallnotes', async (req, res) => {
         return res.status(200).json({
             allnotes,
             message: 'note fetched successfully',
+            status: 200,
+            meaning: 'ok'
+        })
+
+    } catch (error) {
+        return res.status(501).json({
+            message: error.message,
+            status: 501,
+            meaning: 'internalerror'
+        })
+    }
+})
+
+// to get all the notes in the draft
+router.get('/findallnotes', async (req, res) => {
+    try {
+        const allnotes = await Note.find()
+        if (!allnotes) {
+            return res.status(400).json({
+                message: 'Unable to fetch the review notes',
+                status: 400,
+                meaning: 'badrequest'
+            })
+        }
+
+        return res.status(200).json({
+            allnotes,
+            message: 'review note fetched successfully',
             status: 200,
             meaning: 'ok'
         })
@@ -999,5 +1033,6 @@ router.post("/getquote", async (req, res) => {
         res.status(500).json({ message: "Error retrieving quote.", error });
     }
 });
+
 
 module.exports = router
