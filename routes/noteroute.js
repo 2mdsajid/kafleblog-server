@@ -234,7 +234,7 @@ router.post('/savenote', async (req, res, next) => {
             content,
             keywords,
             readtime,
-            images,
+            introimage,
         } = req.body
 
         let newnote
@@ -257,7 +257,7 @@ router.post('/savenote', async (req, res, next) => {
             newnote.content = content;
             newnote.keywords = keywords || '';
             newnote.readtime = readtime;
-            newnote.images = images;
+            newnote.introimage = introimage;
             newnote.isupdated.state = true;
 
             const saved = await newnote.save();
@@ -275,7 +275,7 @@ router.post('/savenote', async (req, res, next) => {
                 published: true,
                 keywords: keywords || '',
                 readtime,
-                images,
+                introimage,
             });
             await newnote.save();
         }
@@ -316,7 +316,8 @@ router.post('/savedraft', async (req, res, next) => {
         content,
         keywords,
         readtime,
-        images,
+        introimage,
+
     } = req.body
 
     let newnote
@@ -340,7 +341,7 @@ router.post('/savedraft', async (req, res, next) => {
             newnote.content = content;
             newnote.keywords = keywords || '';
             newnote.readtime = readtime;
-            newnote.images = images;
+            newnote.introimage = introimage;
             newnote.isupdated.state = true;
 
             const saved = await newnote.save();
@@ -358,7 +359,7 @@ router.post('/savedraft', async (req, res, next) => {
                 published: false,
                 keywords: keywords || '',
                 readtime,
-                images,
+                introimage,
             });
 
             await newnote.save();
