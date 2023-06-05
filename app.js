@@ -42,7 +42,7 @@ app.use(express.json())
 
 // Linking the noteroute.js file to the main app
 app.use(require('./routes/noteroute'))
-app.use(require('./routes/aws'))
+// app.use(require('./routes/aws'))
 
 const server = http.createServer(app);
 
