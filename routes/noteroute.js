@@ -236,7 +236,8 @@ router.post('/savenote', async (req, res, next) => {
             readtime,
             introimage,
         } = req.body
-
+        
+        console.log("🚀 ~ file: noteroute.js:239 ~ router.post ~ introimage:", introimage)
         let newnote
 
         if (id) {
