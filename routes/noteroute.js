@@ -755,6 +755,15 @@ router.post('/changereview', async (req, res) => {
 
 // ADD subscribers
 // publishing the note from the draft
+
+/* 
+
+   <a href="${process.env.BASE_URL}/unsubscribe/${email}"
+                 style="display:inline-block;background-color:#6C63FF;color:#FFFFFF;font-weight:bold;font-size:16px;padding:16px 32px;border-radius:8px;text-decoration:none;cursor:pointer">
+                Unsubscribe
+              </a>
+
+*/
 router.post('/addsubscribe', async (req, res) => {
     try {
         const { name, email } = req.body
@@ -786,10 +795,7 @@ router.post('/addsubscribe', async (req, res) => {
                 Hi ${name},<br>
                 Thank you for subscribing to our weekly newsletter, Friday Soup. Our newsletter provides updates on AI advancements in medicine, industry trends, and other relevant topics. Stay informed and up-to-date on the latest developments in this exciting field by reading Friday Soup every week.
               </p>
-              <a href="${process.env.BASE_URL}/unsubscribe/${email}"
-                 style="display:inline-block;background-color:#6C63FF;color:#FFFFFF;font-weight:bold;font-size:16px;padding:16px 32px;border-radius:8px;text-decoration:none;cursor:pointer">
-                Unsubscribe
-              </a>
+           
             </div>
           </div>`,
         };
