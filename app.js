@@ -35,7 +35,9 @@ app.use(function (req, res, next) {
     next();
 });
 
-
+app.get('/',(req, res) => {
+    res.json({msg:"hello this is a site"})
+})
 
 //before AUTH.JS loading so that it effects
 app.use(express.json())
