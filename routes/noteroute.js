@@ -16,8 +16,10 @@ const Subscribers = require('../schema/subscriberSchema')
 const Feedback = require('../schema/feedbackSchema')
 const Visitor = require('../schema/visitorSchema')
 const newVisitor = require('../schema/newVisitorSchema')
+const DailyVisit = require('../schema/dailyUsersSchema')
 const Quote = require('../schema/quoteSchema')
 const Admin = require('../schema/adminSchema')
+const UnsubNotific = require('../schema/unsubscribeNotification')
 
 // nodemailer cofnigurration
 const nodemailer = require('nodemailer');
@@ -79,10 +81,6 @@ const addNotes = async () => {
             readtime,
             images,
         } = da
-        //     console.log("🚀 ~ file: noteroute.js:81 ~ data.map ~ title:", title)
-        // console.log("🚀 ~ file: noteroute.js:81 ~ data.map ~ images:", images[0])
-        // console.log("🚀 ~ file: noteroute.js:70 ~ data.map ~ index:", index)
-
         const newnote = new Note({
             title,
             noteid,
@@ -98,11 +96,40 @@ const addNotes = async () => {
         });
 
         await newnote.save();
-        console.log("🚀 ~ file: noteroute.js:95 ~ data.map ~ newnote:", newnote.title)
     })
 }
 
 // addNotes()
+
+
+async function updateCommentsSchema() {
+    try {
+        const notes = await Note.find();
+
+        for (const note of notes) {
+            for (const comment of note.comments) {
+                // Add new parameters to the comments schema
+                comment.name = comment.name || '';
+                comment.email = comment.email || '';
+                comment.comment = comment.comment || '';
+                comment.likes = [];
+                comment.replies = [];
+            }
+
+            console.log(note.comments);
+
+            // Save the updated note
+            await note.save();
+        }
+
+        console.log('Comments schema update completed successfully!');
+    } catch (error) {
+        console.error('Error updating comments schema:', error);
+    }
+}
+
+//   updateCommentsSchema()
+
 
 
 /* MULTER  */
@@ -236,8 +263,7 @@ router.post('/savenote', async (req, res, next) => {
             readtime,
             introimage,
         } = req.body
-        
-        console.log("🚀 ~ file: noteroute.js:239 ~ router.post ~ introimage:", introimage)
+
         let newnote
 
         if (id) {
@@ -385,6 +411,111 @@ router.post('/savedraft', async (req, res, next) => {
 
 })
 
+// add replies
+const { ObjectId } = require('mongodb');
+router.post('/addreply', async (req, res) => {
+
+    try {
+        let {
+            noteid,
+            commentid,
+            name,
+            email,
+            reply
+        } = req.body;
+
+        // Checking for reply, it is compulsory
+        if (!reply) {
+            return res.status(400).json({
+                message: 'Reply is a required field',
+                status: 400,
+                meaning: 'badrequest'
+            });
+        }
+
+        const note = await Note.findOne({ _id: noteid });
+
+        // Find the comment with the given commentId
+        const commentId = new ObjectId(commentid);
+        const comment = await note.comments.find(comment => comment._id.toString() === commentId.toString());
+
+        // If the comment is not found, return an error response
+        if (!comment) {
+            return res.status(404).json({
+                message: 'Comment not found',
+                status: 404,
+                meaning: 'notfound'
+            });
+        }
+
+        // Push the new reply into the replies array of the comment
+        comment.replies.push({
+            name: name || 'reader',
+            email: email || '',
+            reply
+        });
+
+        const savedNote = await note.save();
+
+        const newUnsubNotific = await UnsubNotific.findOne({ _id: '64a517b3eb022d8fb7dc65d7' })
+        if (!newUnsubNotific.email.includes(email)) {
+            // mail notification
+            const mailOptions = {
+                from: 'livingasrb007@gmail.com',
+                to: comment.email,
+                subject: 'Reply On Your Comment',
+                html: `<div style="background-color:#F8FAFC;padding:20px">
+            <div style="background-color:#FFFFFF;border-radius:16px;padding:20px;text-align:center">
+              <img src="https://example.com/logo.png" alt="Friday Soup Logo" style="width: 128px">
+              <h2 style="font-size:28px;font-weight:bold;margin:24px 0 16px">Website Comment Reply Notification</h2>
+              <p style="font-size:16px;margin-bottom:32px">
+                Hi ${comment.name},<br>
+                You have received a reply on your comment on our website. Click the link below to view the comment and continue the conversation:
+                <br><br>
+                <a href="https://aayushmakafle.com.np/${note.noteid}" style="color:#0066CC;text-decoration:underline">View Comment Reply</a>
+              </p>
+              <p style="font-size:12px;color:#999999">
+                To unsubscribe from this notification, click <a href="https://aayushmakafle.com.np/unsubscribe/mailnotification/${comment.email}" style="color:#999999;text-decoration:underline">here</a>.
+              </p>
+            </div>
+          </div>
+          `,
+            };
+
+            try {
+                await transporter.sendMail(mailOptions);
+                console.log(`Email sent to ${email}`);
+            } catch (error) {
+                if (error.message.includes("Invalid recipient")) {
+                    console.log(`Wrong email address: ${email}`);
+                } else {
+                    console.log(error);
+                }
+            }
+        }
+
+        if (savedNote) {
+            res.status(201).json({
+                message: 'Reply added successfully',
+                savedNote,
+                status: 201,
+                meaning: 'created'
+            });
+        } else {
+            res.status(400).json({
+                message: 'Unable to add the reply',
+                status: 400,
+                meaning: 'badrequest'
+            });
+        }
+    } catch (error) {
+        res.status(501).json({
+            message: error.message,
+            status: 501,
+            meaning: 'internalerror'
+        });
+    }
+});
 
 
 // ADDING COMMENTS TO THE NOTE
@@ -754,16 +885,6 @@ router.post('/changereview', async (req, res) => {
 })
 
 // ADD subscribers
-// publishing the note from the draft
-
-/* 
-
-   <a href="${process.env.BASE_URL}/unsubscribe/${email}"
-                 style="display:inline-block;background-color:#6C63FF;color:#FFFFFF;font-weight:bold;font-size:16px;padding:16px 32px;border-radius:8px;text-decoration:none;cursor:pointer">
-                Unsubscribe
-              </a>
-
-*/
 router.post('/addsubscribe', async (req, res) => {
     try {
         const { name, email } = req.body
@@ -866,6 +987,44 @@ router.post('/addvote', async (req, res) => {
     }
 })
 
+// add comments liks
+router.post('/addcommentvote', async (req, res) => {
+    try {
+        const { commentid, noteid, uniqueid } = req.body;
+
+        const note = await Note.findOne({ _id: noteid });
+
+        if (note) {
+            const commentId = new ObjectId(commentid);
+            const comment = await note.comments.find(comment => comment._id.toString() === commentId.toString());
+
+            if (comment) {
+                const { likes } = comment;
+                if (likes.includes(uniqueid)) {
+                    comment.likes = likes.filter(id => id !== uniqueid);
+                } else {
+                    comment.likes.push(uniqueid);
+                }
+            }
+        }
+
+        await note.save();
+
+        return res.status(201).json({
+            message: 'Vote added successfully',
+            comments: note.comments,
+            status: 201,
+            meaning: 'created'
+        });
+    } catch (error) {
+        return res.status(501).json({
+            message: error.message,
+            status: 501,
+            meaning: 'internalerror'
+        });
+    }
+});
+
 
 // add feedback and mail it to the owner
 router.post('/addfeedback', async (req, res) => {
@@ -928,23 +1087,27 @@ router.post('/addvisitor', async (req, res) => {
     try {
         const { uniqueid, ip, useragent } = req.body
 
+        const currentDate = new Date().setHours(0, 0, 0, 0); // Reset time to midnight
+        let newvisit = await DailyVisit.findOne({ date: currentDate });
+        if (newvisit) {
+            newvisit.count++;
+        } else {
+            newvisit = new DailyVisit({ date: currentDate, count: 1 });
+        }
+        await newvisit.save();
+
         let newvisitor
-
         newvisitor = await newVisitor.findOne({ uniqueid: uniqueid })
-
         if (newvisitor) {
             if (!newvisitor.ip || !newvisitor.useragent) {
                 newvisitor.ip = ip;
                 newvisitor.useragent = useragent;
                 await newvisitor.save();
             }
-
             return res.status(400).json({
                 message: 'Already visited byt his user',
-                ip
             });
         }
-
         newvisitor = new newVisitor({
             uniqueid,
             useragent,
@@ -1086,7 +1249,7 @@ router.post('/addviews', async (req, res) => {
             return null
         }
 
-        note.views = note.views+1
+        note.views = note.views + 1
 
         await note.save()
 
@@ -1105,6 +1268,37 @@ router.post('/addviews', async (req, res) => {
         })
     }
 })
+
+
+// add daily user visits
+
+
+// unsubs mails
+router.post('/addunsubnotificemail', async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        const newUnsubNotific = await UnsubNotific.findOne({ _id: '64a517b3eb022d8fb7dc65d7' })
+
+        if (!newUnsubNotific.email.includes(email)) {
+            newUnsubNotific.email.push(email);
+            await newUnsubNotific.save();
+
+            return res.status(201).json({
+                message: 'Email added successfully',
+                unsubs: newUnsubNotific.email,
+            });
+        }
+
+        return res.status(201).json({ message: 'Email already unsubscribed' })
+
+    } catch (error) {
+        return res.status(500).json({
+            message: 'Failed to add email',
+            error: error.message,
+        });
+    }
+});
 
 
 

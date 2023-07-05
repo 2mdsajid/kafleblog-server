@@ -69,19 +69,25 @@ const note = mongoose.Schema({
     },
     comments: [
         {
-            name: {
-                type: String,
-                default: ''
+            name: { type: String, default: '' },
+            email: { type: String, default: '' },
+            comment: { type: String, default: '' },
+            likes: {
+                type: [String],
+                default: []
             },
-            email: {
-                type: String,
-                default: ''
-            },
-            comment: {
-                type: String,
-                default: ''
-            }
-        }
+            replies: [
+                {
+                    name: { type: String, default: '' },
+                    email: { type: String, default: '' },
+                    reply: { type: String, default: '' },
+                    likes: {
+                        type: [String],
+                        default: []
+                    },
+                },
+            ],
+        },
     ],
     date: {
         type: Date,
