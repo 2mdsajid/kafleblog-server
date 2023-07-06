@@ -634,12 +634,11 @@ router.get('/getnotebyid/:id', async (req, res) => {
 
 // get all note of the category
 router.post('/getnotesbycategory', async (req, res) => {
-
     try {
         const { category } = req.body
-        const notes = await Note.find({ category: category, review: false })
+        const notes = await Note.find({ category: category, review: false }).select('_id title noteid intro date readtime introimage')
 
-        if (!notes) {
+        if (!notes || notes.length === 0) {
             return res.status(400).json({
                 message: 'Unable to fetch the notes of this category',
                 status: 400,
@@ -649,20 +648,17 @@ router.post('/getnotesbycategory', async (req, res) => {
 
         res.status(200).json({
             notes,
-            message: 'category notes fetched successfully',
+            message: 'Category notes fetched successfully',
             status: 200,
             meaning: 'ok'
         })
-
     } catch (error) {
         return res.status(501).json({
             message: error.message,
             status: 501,
             meaning: 'internalerror'
         })
-
     }
-
 })
 
 // const User = mongoose.model('User', User);
