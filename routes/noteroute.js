@@ -131,6 +131,23 @@ async function updateCommentsSchema() {
 //   updateCommentsSchema()
 
 
+async function updateDailyVisitsDate() {
+    const visits = await DailyVisit.find();
+  
+    for (const visit of visits) {
+      const currentDate = new Date(visit.date);
+      const yearMonthDay = currentDate.toISOString().slice(0, 10);
+      
+      visit.date = yearMonthDay;
+      await visit.save();
+    }
+  
+    console.log('Date updated successfully for all visits.');
+  }
+
+//   updateDailyVisitsDate()
+  
+
 
 /* MULTER  */
 // Importing necessary libraries
@@ -1084,7 +1101,11 @@ router.post('/addvisitor', async (req, res) => {
         const { uniqueid, ip, useragent } = req.body
 
         const currentDate = new Date().setHours(0, 0, 0, 0); // Reset time to midnight
-        let newvisit = await DailyVisit.findOne({ date: currentDate });
+
+        const isoDate = new Date(currentDate).toISOString();
+        const yearMonthDay = isoDate.slice(0, 10); // Extract the first 10 characters (YYYY-MM-DD)
+        
+        let newvisit = await DailyVisit.findOne({ date: yearMonthDay });
         if (newvisit) {
             newvisit.count++;
         } else {
@@ -1128,15 +1149,30 @@ router.post('/addvisitor', async (req, res) => {
 })
 
 
+
 // get visitors
 router.get('/getvisitors', async (req, res) => {
     try {
 
         const visitors = await newVisitor.find()
 
+        const currentDate = new Date().setHours(0, 0, 0, 0); // Reset time to midnight
+
+        const isoDate = new Date(currentDate).toISOString();
+        const yearMonthDay = isoDate.slice(0, 10); // Extract the first 10 characters (YYYY-MM-DD)
+        
+        let newvisit = await DailyVisit.findOne({ date: yearMonthDay });
+
+        const dailynewisitors = visitors.filter(visitor => {
+            const visitorDate = visitor.timestamp.setHours(0, 0, 0, 0);
+            return visitorDate === currentDate;
+          });
+
         return res.status(201).json({
             message: 'visitor added ',
             visitors,
+            newvisit,
+            dailynewisitors,
             status: 201,
             meaning: 'created'
         })

@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const dailyUserSchema = new mongoose.Schema({
     date: {
-        type: Date,
+        type: String,
         required: true,
         unique: true
     },
