@@ -133,20 +133,20 @@ async function updateCommentsSchema() {
 
 async function updateDailyVisitsDate() {
     const visits = await DailyVisit.find();
-  
+
     for (const visit of visits) {
-      const currentDate = new Date(visit.date);
-      const yearMonthDay = currentDate.toISOString().slice(0, 10);
-      
-      visit.date = yearMonthDay;
-      await visit.save();
+        const currentDate = new Date(visit.date);
+        const yearMonthDay = currentDate.toISOString().slice(0, 10);
+
+        visit.date = yearMonthDay;
+        await visit.save();
     }
-  
+
     console.log('Date updated successfully for all visits.');
-  }
+}
 
 //   updateDailyVisitsDate()
-  
+
 
 
 /* MULTER  */
@@ -743,7 +743,6 @@ router.get('/getpublishednotes', async (req, res) => {
 
 // get all notes --- published, not published, drafted
 router.get('/getallnotes', async (req, res) => {
-    console.log('back get all notes')
     try {
         const allnotes = await Note.find({ review: false, published: true })
         if (!allnotes) {
@@ -773,30 +772,44 @@ router.get('/getallnotes', async (req, res) => {
 // to get all the notes in the draft
 router.get('/findallnotes', async (req, res) => {
     try {
-        const allnotes = await Note.find()
+        const allnotes = await Note.find();
+
         if (!allnotes) {
             return res.status(400).json({
-                message: 'Unable to fetch the review notes',
+                message: 'Unable to fetch the draft notes',
                 status: 400,
                 meaning: 'badrequest'
-            })
+            });
         }
 
+        const transformedNotes = allnotes.map((note) => ({
+            _id: note._id,
+            title: note.title,
+            commentslength: note.comments.length,
+            views: note.views,
+            upvotes: note.upvote.length,
+            isupdated: note.isupdated,
+            intro: note.intro,
+            noteid: note.noteid,
+            date: note.date,
+            review: note.review,
+            published: note.published
+        }));
+
         return res.status(200).json({
-            allnotes,
-            message: 'review note fetched successfully',
+            allnotes: transformedNotes,
+            message: 'Draft notes fetched successfully',
             status: 200,
             meaning: 'ok'
-        })
-
+        });
     } catch (error) {
         return res.status(501).json({
             message: error.message,
             status: 501,
             meaning: 'internalerror'
-        })
+        });
     }
-})
+});
 
 // to get all the notes in the draft
 router.get('/getreviewnotes', async (req, res) => {
@@ -1100,16 +1113,14 @@ router.post('/addvisitor', async (req, res) => {
     try {
         const { uniqueid, ip, useragent } = req.body
 
-        const currentDate = new Date().setHours(0, 0, 0, 0); // Reset time to midnight
-
+        const currentDate = new Date(); // Reset time to midnight
         const isoDate = new Date(currentDate).toISOString();
         const yearMonthDay = isoDate.slice(0, 10); // Extract the first 10 characters (YYYY-MM-DD)
-        
         let newvisit = await DailyVisit.findOne({ date: yearMonthDay });
         if (newvisit) {
             newvisit.count++;
         } else {
-            newvisit = new DailyVisit({ date: currentDate, count: 1 });
+            newvisit = new DailyVisit({ date: yearMonthDay, count: 1 });
         }
         await newvisit.save();
 
@@ -1148,31 +1159,34 @@ router.post('/addvisitor', async (req, res) => {
     }
 })
 
-
-
-// get visitors
-router.get('/getvisitors', async (req, res) => {
+// get chunk data for users
+router.get('/gettablevisitors', async (req, res) => {
     try {
+        const { limit } = req.query;
+        const defaultLimit = 5;
+        const defaultChunkSize = 5;
 
-        const visitors = await newVisitor.find()
+        let visitors;
+        let chunkSize;
 
-        const currentDate = new Date().setHours(0, 0, 0, 0); // Reset time to midnight
+        if (limit) {
+            chunkSize = Number(limit);
+            visitors = await newVisitor.find()
+                .sort({ date: 1 })
+                .limit(defaultLimit + (chunkSize - 1) * defaultChunkSize);
+        } else {
+            chunkSize = 1;
+            visitors = await newVisitor.find().sort({ date: 1 }).limit(defaultLimit);
+        }
 
-        const isoDate = new Date(currentDate).toISOString();
-        const yearMonthDay = isoDate.slice(0, 10); // Extract the first 10 characters (YYYY-MM-DD)
-        
-        let newvisit = await DailyVisit.findOne({ date: yearMonthDay });
-
-        const dailynewisitors = visitors.filter(visitor => {
-            const visitorDate = visitor.timestamp.setHours(0, 0, 0, 0);
-            return visitorDate === currentDate;
-          });
+        const startIndex = (chunkSize - 1) * defaultChunkSize;
+        const endIndex = startIndex + defaultLimit;
+        const chunkedVisitors = visitors.slice(startIndex, endIndex);
+        const timestamps = chunkedVisitors.map(visitor => visitor.timestamp);
 
         return res.status(201).json({
             message: 'visitor added ',
-            visitors,
-            newvisit,
-            dailynewisitors,
+            visitors: chunkedVisitors,
             status: 201,
             meaning: 'created'
         })
@@ -1186,6 +1200,115 @@ router.get('/getvisitors', async (req, res) => {
     }
 })
 
+
+// get chunk data for users
+router.get('/getchunkvisitors', async (req, res) => {
+    try {
+        const currentDate = new Date().setHours(0, 0, 0, 0); // Reset time to midnight
+
+        const visitors = await newVisitor.find().sort({ timestamp: 1 });
+
+        // Map and count users by date
+        const newusercountbydate = visitors.reduce((countByDate, visitor) => {
+            const date = visitor.timestamp.toISOString().split('T')[0]; // Convert to ISO 8601 format and extract the date part
+            countByDate[date] = (countByDate[date] || 0) + 1; // Increment count for the date
+            return countByDate;
+        }, {});
+
+        // Calculate cumulative counts
+        const cumulativecounts = Object.entries(newusercountbydate).reduce(
+            (cumulative, [date, count]) => {
+                const previousCount = cumulative.length > 0 ? cumulative[cumulative.length - 1] : 0;
+                const cumulativeCount = previousCount + count;
+                cumulative.push(cumulativeCount);
+                return cumulative;
+            },
+            []
+        );
+
+        // Calculate cumulative counts with index as key
+        const cumulativeCounts = cumulativecounts.reduce((result, count, index) => {
+            result[index] = count;
+            return result;
+        }, {});
+
+        const dailyvisitor = await DailyVisit.find({}).sort({ date: 1 });
+        const dailyvisitordata = dailyvisitor.reduce((data, { date, count }) => {
+            data[date] = count;
+            return data;
+          }, {});
+          
+
+        return res.status(201).json({
+            message: 'visitor added ',
+            newusercountbydate,
+            cumulativeCounts,
+            dailyvisitordata,
+            status: 201,
+            meaning: 'created'
+        })
+
+    } catch (error) {
+        return res.status(501).json({
+            message: error.message,
+            status: 501,
+            meaning: 'internalerror'
+        })
+    }
+})
+
+// get visitors
+router.get('/getvisitors', async (req, res) => {
+    try {
+        const currentDate = new Date().toISOString() // Extract the first 10 characters (YYYY-MM-DD)
+        const slicedDate = currentDate.slice(0, 10)
+        
+        const visitors = await newVisitor.find()
+
+        // today new visits
+        const dailynewisitors = visitors.filter(visitor => {
+            const visitorDate = new Date(visitor.timestamp).toISOString()
+            return visitorDate.slice(0,10) === slicedDate;
+        });
+        const totalvisitors = visitors.length
+
+        // today all visits
+        const yearMonthDay = slicedDate // Extract the first 10 characters (YYYY-MM-DD)
+        let dailyvisitor = await DailyVisit.findOne({ date: yearMonthDay });
+
+
+        //notes
+        const notes = await Note.find();
+        const viewssum = notes.map((note) => note.views).reduce((acc, curr) => acc + curr, 0);
+        const highestViewNote = notes.reduce((prevNote, currNote) => {
+            if (currNote.views > prevNote.views) {
+                return currNote;
+            }
+            return prevNote;
+        });
+        const { title, noteid, views } = highestViewNote;
+        const highestviewnote = { title, noteid, views }
+
+
+        return res.status(201).json({
+            message: 'visitor added ',
+            viewssum,
+            totalvisitors,
+            highestviewnote,
+            dailyvisitor,
+            dailynewisitors: dailynewisitors.length, //remove the length to get the array
+            status: 201,
+            meaning: 'created'
+        })
+
+    } catch (error) {
+        return res.status(501).json({
+            message: error.message,
+            status: 501,
+            meaning: 'internalerror'
+        })
+    }
+})
 // saving and getting quote from db
 router.post("/getquote", async (req, res) => {
 
