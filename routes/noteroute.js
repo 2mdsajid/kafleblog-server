@@ -588,6 +588,54 @@ router.post('/addcomment', async (req, res) => {
     }
 })
 
+// delete comment
+// Server-side route for deleting a comment from a note
+router.post('/deletecomment', async (req, res) => {
+    const { id, commentid } = req.body;
+    try {
+      const note = await Note.findById(id);
+  
+      if (!note) {
+        return res.status(404).json({
+          message: 'Note not found',
+          status: 404,
+          meaning: 'notfound'
+        });
+      }
+  
+      // Find the index of the comment with matching _id in the note's comments array
+      const commentIndex = note.comments.findIndex(comment => comment._id.toString() === commentid);
+  
+      if (commentIndex === -1) {
+        return res.status(404).json({
+          message: 'Comment not found',
+          status: 404,
+          meaning: 'notfound'
+        });
+      }
+  
+      // Remove the comment from the note's comments array
+      note.comments.splice(commentIndex, 1);
+  
+      // Save the updated note to the database
+      await note.save();
+  
+      return res.status(200).json({
+        message: 'Vayo dilit. Refresh gara aba!',
+        status: 200,
+        meaning: 'ok'
+      });
+  
+    } catch (error) {
+      return res.status(501).json({
+        message: error.message,
+        status: 501,
+        meaning: 'internalerror'
+      });
+    }
+  });
+  
+
 // get a single note, useful for url based routes with noteid in url
 router.post('/getanote', async (req, res) => {
 
@@ -876,6 +924,7 @@ router.post('/deletenote', async (req, res) => {
         });
     }
 });
+
 
 
 // publishing the note from the draft
