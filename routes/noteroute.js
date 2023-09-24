@@ -1162,16 +1162,16 @@ router.post("/addvisitor", async (req, res) => {
   }
 });
 
-async function fetchLocationInfo(ip) {
-  const response = await fetch(
-    `https://ipinfo.io/${ip}/json?token=80ea4f6c43a232`
-  );
-  if (response.ok) {
-    return await response.json();
-  }
-  const dat = await response.json();
-  return null; // Return null in case of an error
-}
+// async function fetchLocationInfo(ip) {
+//   const response = await fetch(
+//     `https://ipinfo.io/${ip}/json?token=80ea4f6c43a232`
+//   );
+//   if (response.ok) {
+//     return await response.json();
+//   }
+//   const dat = await response.json();
+//   return null; // Return null in case of an error
+// }
 
 // get chunk data for users
 router.get("/gettablevisitors", async (req, res) => {
@@ -1202,23 +1202,9 @@ router.get("/gettablevisitors", async (req, res) => {
           device: parsed_agent.device.model,
         };
 
-        let ipInfo;
-        const response = await fetch(
-          `https://ipinfo.io/${item.ip}/json?token=80ea4f6c43a232`
-        );
-        if (!response.ok) {
-          ipInfo = null;
-        }
-        ipInfo = await response.json();
-        console.log(
-          "🚀 ~ file: noteroute.js:1203 ~ transformedArray ~ ipInfo:",
-          ipInfo
-        );
-
         return {
           useragent: agent,
           ip: item.ip,
-          city: ipInfo ? ipInfo.city : "unknown",
           timestamp: item.timestamp,
           month,
           day,
