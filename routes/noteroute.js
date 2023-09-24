@@ -1162,6 +1162,15 @@ router.post("/addvisitor", async (req, res) => {
   }
 });
 
+async function fetchLocationInfo(ip) {
+  const response = await fetch(`https://ipinfo.io/${ip}/json?token=80ea4f6c43a232`);
+  if (response.ok) {
+    return await response.json();
+  }
+  const dat = await response.json();
+  return null; // Return null in case of an error
+}
+
 // get chunk data for users
 router.get("/gettablevisitors", async (req, res) => {
   try {
@@ -1176,28 +1185,32 @@ router.get("/gettablevisitors", async (req, res) => {
       .select("-_id useragent ip timestamp")
       .limit(defaultLimit + limit * defaultLimit);
 
-    const transformedArray = visitors.map((item) => {
-      const timestamp = new Date(item.timestamp);
-      const month = new Intl.DateTimeFormat("en-US", { month: "long" }).format(
-        timestamp
-      );
-      const day = timestamp.getDate().toString();
+    const transformedArray = await Promise.all(visitors.map(async (item) => {
+        const timestamp = new Date(item.timestamp);
+        const month = new Intl.DateTimeFormat("en-US", { month: "long" }).format(
+          timestamp
+        );
+        const day = timestamp.getDate().toString();
+      
+        const parsed_agent = uaparser(item.useragent);
+        const agent = {
+          referrel: parsed_agent.browser.name,
+          os: parsed_agent.os.name,
+          device: parsed_agent.device.model,
+        };
+      
+        const ipInfo = await fetchLocationInfo(item.ip);
 
-      const parsed_agent = uaparser(item.useragent);
-      const agent = {
-        referrel: parsed_agent.browser.name,
-        os: parsed_agent.os.name,
-        device: parsed_agent.device.model,
-      };
-
-      return {
-        useragent: agent,
-        ip: item.ip,
-        timestamp: item.timestamp,
-        month,
-        day,
-      };
-    });
+        return {
+          useragent: agent,
+          ip: item.ip,
+          city: ipInfo ? ipInfo.city : 'unknown',
+          timestamp: item.timestamp,
+          month,
+          day,
+        };
+      }));
+      
 
     return res.status(201).json({
       message: "visitor added ",
