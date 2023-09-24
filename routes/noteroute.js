@@ -1163,7 +1163,9 @@ router.post("/addvisitor", async (req, res) => {
 });
 
 async function fetchLocationInfo(ip) {
-  const response = await fetch(`https://ipinfo.io/${ip}/json?token=80ea4f6c43a232`);
+  const response = await fetch(
+    `https://ipinfo.io/${ip}/json?token=80ea4f6c43a232`
+  );
   if (response.ok) {
     return await response.json();
   }
@@ -1185,32 +1187,44 @@ router.get("/gettablevisitors", async (req, res) => {
       .select("-_id useragent ip timestamp")
       .limit(defaultLimit + limit * defaultLimit);
 
-    const transformedArray = await Promise.all(visitors.map(async (item) => {
+    const transformedArray = await Promise.all(
+      visitors.map(async (item) => {
         const timestamp = new Date(item.timestamp);
-        const month = new Intl.DateTimeFormat("en-US", { month: "long" }).format(
-          timestamp
-        );
+        const month = new Intl.DateTimeFormat("en-US", {
+          month: "long",
+        }).format(timestamp);
         const day = timestamp.getDate().toString();
-      
+
         const parsed_agent = uaparser(item.useragent);
         const agent = {
           referrel: parsed_agent.browser.name,
           os: parsed_agent.os.name,
           device: parsed_agent.device.model,
         };
-      
-        const ipInfo = await fetchLocationInfo(item.ip);
+
+        let ipInfo;
+        const response = await fetch(
+          `https://ipinfo.io/${item.ip}/json?token=80ea4f6c43a232`
+        );
+        if (!response.ok) {
+          ipInfo = null;
+        }
+        ipInfo = await response.json();
+        console.log(
+          "🚀 ~ file: noteroute.js:1203 ~ transformedArray ~ ipInfo:",
+          ipInfo
+        );
 
         return {
           useragent: agent,
           ip: item.ip,
-          city: ipInfo ? ipInfo.city : 'unknown',
+          city: ipInfo ? ipInfo.city : "unknown",
           timestamp: item.timestamp,
           month,
           day,
         };
-      }));
-      
+      })
+    );
 
     return res.status(201).json({
       message: "visitor added ",
@@ -1219,8 +1233,9 @@ router.get("/gettablevisitors", async (req, res) => {
       meaning: "created",
     });
   } catch (error) {
+    console.log("🚀 ~ file: noteroute.js:1222 ~ router.get ~ error:", error);
     return res.status(501).json({
-      message: error.message,
+      message: error,
       status: 501,
       meaning: "internalerror",
     });
