@@ -469,8 +469,8 @@ router.post("/deletecomment",VerifyAdmin, async (req, res) => {
 router.post("/getanote", async (req, res) => {
   try {
     const { noteid } = req.body;
-    const note = await Note.findOne({ noteid: noteid, review: false });
-    // if note is not there, return the whole process without any data
+    const note = await Note.findOne({ noteid: noteid, review: false })
+    .select('_id noteid title category author content introimage intro keywords readtime upvote comments date')
     if (!note) {
       return res.status(400).json({
         message: "Unable to fetch the note! check your credentials",
@@ -556,6 +556,7 @@ router.post("/getnotesbycategory", async (req, res) => {
 
 // const User = mongoose.model('User', User);
 router.get("/getrecentnotes", async (req, res) => {
+  console.log('vbnm,')
   try {
     const allnotes = await Note.find({ review: false, published: true })
       .sort({ date: -1 }) // Sort by createdAt field in descending order
@@ -563,7 +564,6 @@ router.get("/getrecentnotes", async (req, res) => {
       .exec(); // Execute the query to get the notes
 
     const reversedNotes = allnotes.reverse();
-
     if (!allnotes) {
       return res.status(400).json({
         message: "Unable to fetch the notes",
@@ -1079,7 +1079,6 @@ router.get("/gettablevisitors",VerifyAdmin, async (req, res) => {
       meaning: "created",
     });
   } catch (error) {
-    console.log("🚀 ~ file: noteroute.js:1222 ~ router.get ~ error:", error);
     return res.status(501).json({
       message: error,
       status: 501,
