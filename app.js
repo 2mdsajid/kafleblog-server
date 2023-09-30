@@ -3,9 +3,6 @@ let express = require('express')
 const http = require('http');
 let app = express()
 
-
-
-
 // Set the maximum payload size to 50MB
 const bodyParser = require('body-parser');
 app.use(bodyParser.json({ limit: '50mb' }));
@@ -44,7 +41,7 @@ app.use(express.json())
 
 // Linking the noteroute.js file to the main app
 app.use(require('./routes/noteroute'))
-// app.use(require('./routes/aws'))
+app.use(require('./routes/aws'))
 
 const server = http.createServer(app);
 
