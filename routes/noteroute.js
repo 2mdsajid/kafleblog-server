@@ -8,8 +8,11 @@ const dbConnection = require("../db/mongo");
 const cloudinary = require("cloudinary").v2;
 const Pusher = require("pusher");
 var uaparser = require("ua-parser-js");
+const jwt = require("jsonwebtoken");
 
 const { data } = require("../public/uploads/data");
+const { VerifyAdmin } = require("../middlewares/middlewares");
+
 // const User = require('../schemas/UserSchems')
 const Note = require("../schema/noteSchems");
 const Subscribers = require("../schema/subscriberSchema");
@@ -46,102 +49,6 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// sdfghj
-
-const migrateVisitor = async () => {
-  const visitors = await Visitor.find();
-
-  visitors.map(async (visitor) => {
-    const newvisitor = new newVisitor({
-      uniqueid: visitor.uniqueid,
-      useragent: "",
-      ip: "",
-      timestamp: visitor.timestamp,
-    });
-
-    await newvisitor.save();
-  });
-};
-
-// migrateVisitor()
-
-const addNotes = async () => {
-  data.map(async (da, index) => {
-    const {
-      title,
-      noteid,
-      category,
-      subcategory,
-      intro,
-      content,
-      keywords,
-      readtime,
-      images,
-    } = da;
-    const newnote = new Note({
-      title,
-      noteid,
-      category,
-      subcategory: subcategory || "",
-      intro,
-      content,
-      review: false,
-      published: true,
-      keywords: keywords || "",
-      readtime,
-      introimage: images[0].image,
-    });
-
-    await newnote.save();
-  });
-};
-
-// addNotes()
-
-async function updateCommentsSchema() {
-  try {
-    const notes = await Note.find();
-
-    for (const note of notes) {
-      for (const comment of note.comments) {
-        // Add new parameters to the comments schema
-        comment.name = comment.name || "";
-        comment.email = comment.email || "";
-        comment.comment = comment.comment || "";
-        comment.likes = [];
-        comment.replies = [];
-      }
-
-      console.log(note.comments);
-
-      // Save the updated note
-      await note.save();
-    }
-
-    console.log("Comments schema update completed successfully!");
-  } catch (error) {
-    console.error("Error updating comments schema:", error);
-  }
-}
-
-//   updateCommentsSchema()
-
-async function updateDailyVisitsDate() {
-  const visits = await DailyVisit.find();
-
-  for (const visit of visits) {
-    const currentDate = new Date(visit.date);
-    const yearMonthDay = currentDate.toISOString().slice(0, 10);
-
-    visit.date = yearMonthDay;
-    await visit.save();
-  }
-
-  console.log("Date updated successfully for all visits.");
-}
-
-//   updateDailyVisitsDate()
-
 /* MULTER  */
 // Importing necessary libraries
 const multer = require("multer");
@@ -149,112 +56,65 @@ const fse = require("fs-extra");
 const path = require("path");
 const Subscriber = require("../schema/subscriberSchema");
 
-// Setting the directory where the files will be stored
-const DIR = "./public/";
-
-// Function to configure the storage settings for Multer
-const setDirectory = () => {
-  console.log("multer begins");
-
-  const uploadDir = `${DIR}uploads/`;
-  fse.ensureDir(uploadDir);
-
-  // Setting the destination and filename for the uploaded files
-  const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-      // Setting the directory to store the uploaded files
-      cb(null, DIR + "uploads/");
-    },
-    filename: (req, file, cb) => {
-      // Setting the filename to the original filename of the uploaded file
-      cb(null, file.originalname);
-    },
-  });
-
-  // Configuring Multer with the storage settings and file filter
-  return multer({
-    storage: storage,
-    fileFilter: (req, file, cb) => {
-      // Checking if the uploaded file is a valid image, audio, or video file
-      if (
-        ["image/png", "image/jpg", "image/jpeg", "image/webp"].includes(
-          file.mimetype
-        ) ||
-        ["audio/mpeg", "audio/wav", "audio/mp3"].includes(file.mimetype) ||
-        ["video/mp4", "video/mpeg", "video/quicktime"].includes(file.mimetype)
-      ) {
-        cb(null, true);
-      } else {
-        cb(
-          new Error(
-            "Only .png, .jpg, .jpeg, .webp, .mp3, .wav, .mp4, and .mov formats allowed!"
-          )
-        );
-      }
-    },
-  });
-};
-const upload = setDirectory();
-
 // Define a route for saving the images, which accepts a file upload of up to 15 files using multer.
-router.post("/saveimages", upload.array("images", 15), async (req, res) => {
-  let imageurls = []; //to store the URLs
-  // const { captions, sources } = req.body
+// router.post("/saveimages", upload.array("images", 15), async (req, res) => {
+//   let imageurls = []; //to store the URLs
+//   // const { captions, sources } = req.body
 
-  try {
-    // Move each uploaded file to the new directory and generate URLs for each file
-    const images = await Promise.all(
-      req.files.map(async (file, index) => {
-        // CLOUDINARY IMAGES UPLOAD-----------------------------
-        const result = await cloudinary.uploader.upload(file.path, {
-          folder: "notes",
-          transformation: [
-            { width: 800, height: 600, crop: "fill", aspect_ratio: "4:3" },
-          ],
-        });
+//   try {
+//     // Move each uploaded file to the new directory and generate URLs for each file
+//     const images = await Promise.all(
+//       req.files.map(async (file, index) => {
+//         // CLOUDINARY IMAGES UPLOAD-----------------------------
+//         const result = await cloudinary.uploader.upload(file.path, {
+//           folder: "notes",
+//           transformation: [
+//             { width: 800, height: 600, crop: "fill", aspect_ratio: "4:3" },
+//           ],
+//         });
 
-        const imgurl = result.secure_url;
+//         const imgurl = result.secure_url;
 
-        // const imgurl = 'anurl';
+//         // const imgurl = 'anurl';
 
-        // creating a name to put in the blog during entry -  to be parsed with image urls later on render
-        const img = `_root_i_${index + 1}`;
+//         // creating a name to put in the blog during entry -  to be parsed with image urls later on render
+//         const img = `_root_i_${index + 1}`;
 
-        const image = {
-          image: imgurl || "",
-          caption: "",
-          source: "",
-        };
+//         const image = {
+//           image: imgurl || "",
+//           caption: "",
+//           source: "",
+//         };
 
-        imageurls.push(image);
-        await fse.unlink(file.path);
-      })
-    );
-    if (imageurls.length === req.files.length) {
-      return res.status(201).json({
-        message: "Note addded successfully",
-        status: 201,
-        imageurls,
-        meaning: "created",
-      });
-    } else {
-      return res.status(501).json({
-        message: "images were not uploaded properly",
-        status: 501,
-        meaning: "internalerror",
-      });
-    }
-  } catch (error) {
-    res.status(501).json({
-      message: error.message,
-      status: 501,
-      meaning: "internalerror",
-    });
-  }
-});
+//         imageurls.push(image);
+//         await fse.unlink(file.path);
+//       })
+//     );
+//     if (imageurls.length === req.files.length) {
+//       return res.status(201).json({
+//         message: "Note addded successfully",
+//         status: 201,
+//         imageurls,
+//         meaning: "created",
+//       });
+//     } else {
+//       return res.status(501).json({
+//         message: "images were not uploaded properly",
+//         status: 501,
+//         meaning: "internalerror",
+//       });
+//     }
+//   } catch (error) {
+//     res.status(501).json({
+//       message: error.message,
+//       status: 501,
+//       meaning: "internalerror",
+//     });
+//   }
+// });
 
 /*  ADDING NOTES TO DATABASE */
-router.post("/savenote", async (req, res, next) => {
+router.post("/savenote",VerifyAdmin, async (req, res, next) => {
   try {
     // Get the request body parameters
     const {
@@ -333,7 +193,7 @@ router.post("/savenote", async (req, res, next) => {
 });
 
 /*  ADDING NOTES TO DRAFT */
-router.post("/savedraft", async (req, res, next) => {
+router.post("/savedraft",VerifyAdmin, async (req, res, next) => {
   // Get the request body parameters
   const {
     id,
@@ -410,7 +270,7 @@ router.post("/savedraft", async (req, res, next) => {
 
 // add replies
 const { ObjectId } = require("mongodb");
-router.post("/addreply", async (req, res) => {
+router.post("/addreply",VerifyAdmin, async (req, res) => {
   try {
     let { noteid, commentid, name, email, reply } = req.body;
 
@@ -559,7 +419,7 @@ router.post("/addcomment", async (req, res) => {
 
 // delete comment
 // Server-side route for deleting a comment from a note
-router.post("/deletecomment", async (req, res) => {
+router.post("/deletecomment",VerifyAdmin, async (req, res) => {
   const { id, commentid } = req.body;
   try {
     const note = await Note.findById(id);
@@ -783,7 +643,7 @@ router.get("/getallnotes", async (req, res) => {
 });
 
 // to get all the notes in the draft
-router.get("/findallnotes", async (req, res) => {
+router.get("/findallnotes",VerifyAdmin, async (req, res) => {
   try {
     const allnotes = await Note.find();
 
@@ -825,7 +685,7 @@ router.get("/findallnotes", async (req, res) => {
 });
 
 // to get all the notes in the draft
-router.get("/getreviewnotes", async (req, res) => {
+router.get("/getreviewnotes",VerifyAdmin, async (req, res) => {
   try {
     const reviewnotes = await Note.find({ review: true });
     if (!reviewnotes) {
@@ -852,7 +712,7 @@ router.get("/getreviewnotes", async (req, res) => {
 });
 
 // delete a  note
-router.post("/deletenote", async (req, res) => {
+router.post("/deletenote",VerifyAdmin, async (req, res) => {
   const { id } = req.body;
   try {
     const noteToDelete = await Note.findById(id);
@@ -888,7 +748,7 @@ router.post("/deletenote", async (req, res) => {
 });
 
 // publishing the note from the draft
-router.post("/changereview", async (req, res) => {
+router.post("/changereview",VerifyAdmin, async (req, res) => {
   try {
     const { id } = req.body;
     const note = await Note.findOne({ _id: id });
@@ -1174,7 +1034,7 @@ router.post("/addvisitor", async (req, res) => {
 // }
 
 // get chunk data for users
-router.get("/gettablevisitors", async (req, res) => {
+router.get("/gettablevisitors",VerifyAdmin, async (req, res) => {
   try {
     let limit = req.query.limit || 0;
     const defaultLimit = 50;
@@ -1284,7 +1144,7 @@ router.get("/getchunkvisitors", async (req, res) => {
 });
 
 // get visitors
-router.get("/getvisitors", async (req, res) => {
+router.get("/getvisitors",VerifyAdmin, async (req, res) => {
   try {
     const currentDate = new Date().toISOString(); // Extract the first 10 characters (YYYY-MM-DD)
     const slicedDate = currentDate.slice(0, 10);
@@ -1376,74 +1236,31 @@ router.get("/getvisitors", async (req, res) => {
     });
   }
 });
-// saving and getting quote from db
-router.post("/getquote", async (req, res) => {
-  const { quote } = req.body;
-  const targetDate = new Date(); // Specify the target date here
-  targetDate.setHours(0, 0, 0, 0); // Set time to the beginning of the day
 
-  try {
-    const dBquote = await Quote.findOne({
-      date: {
-        $gte: targetDate,
-        $lt: new Date(targetDate.getTime() + 24 * 60 * 60 * 1000),
-      },
-    });
-    if (dBquote) {
-      return res.json({
-        quote: dBquote.quote,
-        isquote: true,
-      });
-    } else {
-      const dBiDquote = await Quote.findOne({ id: quote.id });
-      console.log("new");
-
-      if (!dBiDquote) {
-        // Create a new quote
-        const newQuote = new Quote({
-          id: quote.id,
-          quote: quote.quote,
-        });
-
-        await newQuote.save();
-
-        res.json({
-          quote: quote.quote,
-          isquote: false,
-        });
-      } else {
-        res.json({
-          quote: null,
-          isquote: false,
-        });
-      }
-    }
-  } catch (error) {
-    res.status(500).json({ message: "Error retrieving quote.", error });
-  }
-});
 
 // adminlogin
 router.post("/adminlogin", async (req, res) => {
   const { username, password } = req.body;
-
   try {
     // Find admin with matching username and password
     const admin = await Admin.findOne({ username, password });
-
-    if (admin) {
-      // Admin found
-      res.status(200).json({
-        isAdmin: true,
-        message: "Admin login successful",
-      });
-    } else {
-      // Admin not found
+    if (!admin) {
       res.status(401).json({
-        isAdmin: false,
-        message: "Invalid username or password",
+        message: "Admin login unsuccessful",
       });
     }
+    const user = {
+      username: username,
+      password: password,
+    };
+
+    const secretKey = process.env.JWT_SECRET_KEY;
+    const token = jwt.sign(user, secretKey);
+    res.status(200).json({
+      token: token,
+      message: "Admin login successful",
+    })
+
   } catch (error) {
     res.status(500).json({ message: "Error occurred while finding admin" });
   }
